@@ -199,7 +199,7 @@ class Robot(object):
                 else:
                     self.goal_found = True
                     node_to_go = self.nodes_to_check[0]["node"]
-                    print("Goal seen in", node_to_go )
+                    #print("Goal seen in", node_to_go )
                     n_zeros = np.count_nonzero(self.maps[self.Page.visits] != 0) 
                     coverage = (n_zeros / (self.maze_dim * self.maze_dim)) * 100
                     print("Goal seen in", node_to_go, "coverage:", coverage )

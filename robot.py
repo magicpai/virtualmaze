@@ -110,15 +110,6 @@ class Robot(object):
         )
 
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
-        # list of to be checked nodes sorted by lowest f_cost
-        self.nodes_to_check = []
-        self.nodes_to_check.append(
-            {
-                "node": self.pos["node"],
-                "f_cost": self.maps[self.Page.f1][tuple(self.pos["node"])],
-                "checked": True,
-            }
-        )
 
         self.timesteps = []
         self.timesteps_counter = 0
@@ -135,15 +126,8 @@ class Robot(object):
         self.maps[self.Page.visits][tuple(self.pos['node'])] = 1
 
         # list of to be checked nodes sorted by lowest f_cost
-        self.nodes_to_check = []
-        self.nodes_to_check.append(
-            {
-                "node": self.pos["node"],
-                "f_cost": self.maps[self.Page.f1][tuple(self.pos["node"])],
-                "checked": True,
-            }
-        )
-
+        self.open_nodes = []
+        self.open_nodes.append(self.pos["node"])
 
 
     def generate_h_cost(self, goals, heuristic=[]):
@@ -185,109 +169,69 @@ class Robot(object):
         """
         rotation = 0
         movement = 0
-        idx_lowest_timestep = 0
 
         if not self.run2:
-            if self.fill_map_heuristic(sensors):
-                if self.dmode in [self.dmode.RANDOM_FULL, self.dmode.HEURISTIC_FULL]:
-                    #print("Maze fully discovered call reset")
+            self.fill_map_heuristic(sensors)
+            if (0 not in self.maps[self.Page.visits]) or (list(self.pos['node']) in self.goals and self.dmode in [self.dmode.RANDOM_GOALS, self.dmode.HEURISTIC_GOALS]):
+
                     self.run2 = True
                     self.pos["node"] = self.start
                     self.pos["heading"] = self.start_heading
                     self.timesteps_counter = self.path_start_to_goal(self.pos["node"], self.pos["heading"], self.goals)
                     return "Reset", "Reset", 0
-                else:
-                    self.goal_found = True
-                    node_to_go = self.nodes_to_check[0]["node"]
-                    #print("Goal seen in", node_to_go )
-                    n_zeros = np.count_nonzero(self.maps[self.Page.visits] != 0) 
-                    coverage = (n_zeros / (self.maze_dim * self.maze_dim)) * 100
-                    print("Goal seen in", node_to_go, "coverage:", coverage )
-                    self.timesteps_counter = self.path_start_to_goal(
-                        self.pos["node"], self.pos["heading"], [node_to_go]
-                    )
-
-        self.nodes_to_check = sorted(
-            self.nodes_to_check, key=itemgetter("checked", "f_cost")
-        )
 
         # print("nodes_to_check:", self.nodes_to_check)
 
         # pick top most node with lowest f_cost from the list
         if self.timesteps_counter == 0:
-            if self.goal_found:
-                self.run2 = True
-                print("Goal visited in", self.pos["node"], "heading:",self.pos["heading"] )
-                self.pos["node"] = self.start
-                self.pos["heading"] = self.start_heading
-                self.timesteps_counter = self.path_start_to_goal(
-                    self.pos["node"], self.pos["heading"], self.goals
-                )
-                return "Reset", "Reset", 0
 
             timesteps = []
-            for idx, node in enumerate(self.nodes_to_check):
-                if node["checked"] == True:
-                    break
-                if self.dmode in [
-                    self.dmode.HEURISTIC_FULL,
-                    self.dmode.HEURISTIC_GOALS
-                ]:
-                    timestep = (
-                        self.path_start_to_goal(
-                            self.pos["node"], self.pos["heading"], [node["node"]]
-                        )
-                        + self.maps[self.Page.h1][tuple(node["node"])]
-                    )
+
+            for idx, node in enumerate(self.open_nodes):
+
+                if( list(node) in self.goals and self.dmode in [self.dmode.RANDOM_GOALS, self.dmode.HEURISTIC_GOALS]):
+                  node_to_go = node
+                  break
+
+                if self.dmode in [ self.dmode.HEURISTIC_FULL,
+                                self.dmode.HEURISTIC_GOALS
+                                ]:
+                    timestep = (self.path_start_to_goal(self.pos["node"], 
+                                self.pos["heading"], [node])
+                                + self.maps[self.Page.h1][tuple(node)]
+                                )
+                    if not timesteps:
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep < timesteps[0]["timestep"]:
+                        timesteps.clear()
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep == timesteps[0]["timestep"]:
+                        timesteps.append({"node":node, "timestep": timestep})
+
+
                 else:
                     timestep = self.path_start_to_goal(
-                        self.pos["node"], self.pos["heading"], [node["node"]]
-                    )
-
-                timesteps.append(timestep)
+                        self.pos["node"], self.pos["heading"], [node]
+                        )
+                    if not timesteps:
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep < timesteps[0]["timestep"]:
+                        timesteps.clear()
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep == timesteps[0]["timestep"]:
+                        timesteps.append({"node":node, "timestep": timestep})
 
             if timesteps:
-                # idx_lowest_timestep = timesteps.index(min(timesteps))
-                min_ts = min(timesteps)
-                # print("distance all open nodes to current node", timesteps, "min:", min_ts)
-                random_list = []
-                for idx, item in enumerate(timesteps):
-                    if item == min_ts:
-                        random_list.append(idx)
-                idx_lowest_timestep = random.choice(random_list)
-                # print("index of next node selected", idx_lowest_timestep)
-
-            else:
-                # print ("No more nodes to be checked")
-                return "Reset", "Reset", 0
-
-            node_to_go = self.nodes_to_check[idx_lowest_timestep]["node"]
+                node_to_go = random.choice(timesteps)["node"]
             # print("node_to_go:", node_to_go)
 
             self.timesteps_counter = self.path_start_to_goal(
                 self.pos["node"], self.pos["heading"], [node_to_go]
             )
-            # print(
-            #     "from:",
-            #     self.pos["node"],
-            #     " to:",
-            #     node_to_go,
-            #     "timesteps:",
-            #     self.timesteps_counter,
-            # )
-            self.nodes_to_check[idx_lowest_timestep]["checked"] = True
-            self.nodes_to_check = sorted(
-                self.nodes_to_check, key=itemgetter("checked", "f_cost")
-            )
 
-        rotation, movement, heading, move_to = self.timesteps[
-            len(self.timesteps) - self.timesteps_counter
-        ]
+        rotation, movement, heading, move_to = self.timesteps[len(self.timesteps) - 
+                                                self.timesteps_counter]
         self.timesteps_counter -= 1
-
-        for idx, node in enumerate(self.nodes_to_check):
-            if node["node"] == move_to:
-                self.nodes_to_check[idx]["checked"] = True
 
         print("moves:", self.pos["node"], " to ", move_to)
         self.pos["node"] = move_to
@@ -309,6 +253,10 @@ class Robot(object):
 
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
 
+        for idx,item in enumerate(self.open_nodes):
+            if item == self.pos["node"]:
+                self.open_nodes.pop(idx)
+
         for idx, dist in enumerate(sensors):
 
             heading = self.dir_sensors[self.pos["heading"]][idx]
@@ -316,7 +264,6 @@ class Robot(object):
             for i in range(dist):  # skipped if sensor gives 0 distance
                 current_node = list(np.array(self.pos["node"]) + 
                 (i * np.array(self.dir_move[heading])))
-
 
                 if (self.maps[self.Page.walls][tuple(current_node)] & self.dir_int[heading]) == 0:
                     self.maps[self.Page.walls][tuple(current_node)] += self.dir_int[heading]
@@ -338,24 +285,8 @@ class Robot(object):
                         + self.maps[self.Page.g1][tuple(next_node)]
                     )
 
-                    if self.dmode in [
-                        self.dmode.RANDOM_GOALS,
-                        self.dmode.HEURISTIC_GOALS,
-                    ]:
-                        if list(next_node) in self.goals:
-                            #print("One of goals reached")
-                            self.nodes_to_check.insert(0,
-                                {"node": next_node,
-                                "f_cost": self.maps[self.Page.f1][tuple(next_node)],
-                                "checked": False,
-                                },)
-                            return True
-
-                    self.nodes_to_check.append({
-                            "node": next_node,
-                            "f_cost": self.maps[self.Page.f1][tuple(next_node)],
-                            "checked": False,
-                        })
+                    self.open_nodes.append(next_node)
+                    #print("next_node:", next_node)
 
                     self.maps[self.Page.nstatus1][tuple(next_node)] = self.nstatus["open"]
 
@@ -364,10 +295,7 @@ class Robot(object):
                         self.dir_int[self.dir_reverse[heading]]) == 0:
                         self.maps[self.Page.walls][tuple(next_node)] += self.dir_int[self.dir_reverse[heading]]
         
-        if 0 not in self.maps[self.Page.visits]:
-            return True
-        else:
-            return False
+        return
 
     def path_start_to_goal(self, start, direction, goals):
 

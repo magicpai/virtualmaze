@@ -27,8 +27,8 @@ class DMode(IntEnum):
 
 #mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt']
 #mazefiles = ['test_maze_01b.txt', 'test_maze_02b.txt']
-mazefiles = ['test_maze_01b.txt']
-algs =[DMode.RANDOM_GOALS]
+mazefiles = ['test_maze_03c.txt']
+algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
 pdcols = ['Alg','Trip','Maze', 'Run1', 'Run2', 'Score', 'Coverage']
 
 
@@ -164,7 +164,10 @@ for maze in mazefiles:
                     
                     if animation:
                         mazeanim.plot_move(robot_pos['heading'],robot_pos['location'],run, freq)
-                        
+                    
+                    # n_zeros = np.count_nonzero(tablenodes[0] != 0) 
+                    # coverage = (n_zeros / (testmaze.dim * testmaze.dim)) * 100
+                    # print("coverage:", coverage)
                     goal_bounds = [testmaze.dim/2 - 1, testmaze.dim/2]
                     if robot_pos['location'][0] in goal_bounds and robot_pos['location'][1] in goal_bounds:
                         hit_goal = True
@@ -178,7 +181,7 @@ for maze in mazefiles:
             if len(runtimes) == 2:
                     print ("Task complete! Score: {:4.3f}".format(runtimes[1] + train_score_mult*runtimes[0]))
                     n_zeros = np.count_nonzero(tablenodes[0] != 0) 
-                    coverage = (n_zeros / (testmaze.dim * testmaze.dim)) * 100
+                    coverage = round((n_zeros / (testmaze.dim * testmaze.dim)) * 100, 2)
                     stats.append([alg, matrixrun, maze, runtimes[0], runtimes[1], round(runtimes[1] + train_score_mult*runtimes[0],2), coverage])
                     print("Total trips ",total_trips)
 

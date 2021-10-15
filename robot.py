@@ -297,6 +297,92 @@ class Robot(object):
         
         return
 
+    def path_finding(self, start, heading, goals):
+        
+        open_nodes = []
+        goal_found = False
+        single_goal_node =[]
+
+        curr_node = start
+        curr_heading = heading
+
+        self.reset_heuristic()
+        self.generate_h_cost(goals, self.maps[self.Page.h2])
+
+        # set g_cost 0 for start node
+        self.maps[self.Page.g2][tuple(curr_node)] = 0
+
+        # calculate f_cost = g_cost + h_cost for start node
+        self.maps[self.Page.f2][tuple(curr_node)] = self.maps[self.Page.g2][tuple(curr_node)] + self.maps[self.Page.h2][tuple(curr_node)]
+        # add start node to open list
+        open.nodes.append({"nodes":curr_node, "heading": curr_heading})
+        self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
+
+        while not goal_found:
+            for heading in self.dir_move.keys():
+                distance = self.dist_to_wall(self, curr_node, curr_heading)
+            # cap distance until self.max_move
+                if distance < self.max_move:
+                    distance = self.max_move
+                
+                for i in range(1, distance + 1):
+                    next_node = list(np.array(curr_node) + (i * np.array(self.dir_move[heading])))
+                    
+                    # skip neighbour node if already evaluated(donde)
+                    if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["done"]:
+                        break
+                    
+                    # update g_cost if new calculated value smaller than stored or no value stored before
+                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1)) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
+                        
+                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1
+                        # calculate f_cost = g_cost + h_cost for start node
+                        self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
+                        # add start node to open list
+                    if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]:
+                        open.nodes.append({"nodes":next_node, "heading": heading})
+                        self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
+                    if list(next_node) in goals:
+                        goal_found = True
+                        single_goal_node = next_node
+                        break
+
+            # out of for loop
+            if goal_found:
+                continue
+
+            # mark node already evaluates as done and removed from open_nodes list
+            self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["done"]
+            for idx,item in enumerate(open_nodes):
+                if item == curr_node:
+                    open_nodes.pop(idx)
+
+            min_f_nodes = []
+            for node in open_nodes:
+                f_cost = self.maps[self.Page.f2][tuple(node)]
+                h_cost = self.maps[self.Page.h2][tuple(node)]
+                if not min_f_nodes:
+                    min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
+                else:
+                    if f_cost < min_f_nodes[0]["f_cost"]:
+                        min_f_nodes.clear()
+                        min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
+                    if f_cost == min_f_nodes[0]["f_cost"]:
+                        if h_cost < min_f_nodes[0]["h_cost"]:
+                            min_f_nodes.clear()
+                            min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
+                        if h_cost == min_f_nodes[0]["h_cost"]:
+                            min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
+            
+            #choose min f_cost from open.nodes list
+            curr_node = random.choice(min_f_nodes)["node"]
+
+        # out of while loops , now find best path
+        for heading in self.dir_move.keys():
+            distance = self.dist_to_wall(self, single_goal_node, heading)
+
+        return
+
     def path_start_to_goal(self, start, direction, goals):
 
         # print("--------------------------------------------------")

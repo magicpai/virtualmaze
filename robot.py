@@ -80,6 +80,7 @@ class Robot(object):
             g2 = 7
             f2 = 8
             nstatus2 = 9
+            parent = 10
 
         self.Page = Page
 
@@ -315,7 +316,7 @@ class Robot(object):
         # calculate f_cost = g_cost + h_cost for start node
         self.maps[self.Page.f2][tuple(curr_node)] = self.maps[self.Page.g2][tuple(curr_node)] + self.maps[self.Page.h2][tuple(curr_node)]
         # add start node to open list
-        open.nodes.append({"nodes":curr_node, "heading": curr_heading})
+        open_nodes.append({"nodes":curr_node, "heading": curr_heading})
         self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
 
         while not goal_found:
@@ -328,7 +329,7 @@ class Robot(object):
                 for i in range(1, distance + 1):
                     next_node = list(np.array(curr_node) + (i * np.array(self.dir_move[heading])))
                     
-                    # skip neighbour node if already evaluated(donde)
+                    # skip neighbour node if already evaluated(done)
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["done"]:
                         break
                     
@@ -338,7 +339,9 @@ class Robot(object):
                         self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
-                        # add start node to open list
+                        # add parent node
+                        self.maps[self.Page.parent][tuple(next_node)] = curr_node
+                        # add  node to open list
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]:
                         open.nodes.append({"nodes":next_node, "heading": heading})
                         self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
@@ -378,10 +381,54 @@ class Robot(object):
             curr_node = random.choice(min_f_nodes)["node"]
 
         # out of while loops , now find best path
-        for heading in self.dir_move.keys():
-            distance = self.dist_to_wall(self, single_goal_node, heading)
+        path = []
+        parent_node = single_goal_node
+        path.append(parent_node)
+        timestep = 0
 
-        return
+        while True:
+            parent_node = self.maps[self.Page.parent][tuple(parent_node)]
+            path.insert(0,parent_node)
+            timestep += timestep
+            if parent_node == start:
+                break
+        
+        for idx,node in enumerate(path[:-1]):
+            next_node = path[idx+1]
+            direction, movement = self.get_head_mov(next_node,node)
+            try:
+                rotation = self.rotation[self.dir_sensors[heading].index(direction)]
+            except:
+                rotation = 0  # indicator for backward movement
+                movement = - movement
+            
+            self.timesteps.append({"rotation": rotation, "movement": movement})
+            
+        return timestep
+
+    def get_head_mov(self, target, start):
+
+        dist_vec = (np.array(target) - np.array(start)).tolist()
+        if dist_vec[0] == 0 and dist_vec[1] > 0:
+            heading = "u"
+            movement = dist_vec[1]
+        elif dist_vec[0] == 0 and dist_vec[1] < 0:
+            heading = "d"
+            movement = dist_vec[1]
+        elif dist_vec[0] > 0 and dist_vec[1] == 0:
+            heading = "r"
+            movement = dist_vec[0]
+        elif dist_vec[0] < 0 and dist_vec[1] == 0:
+            movement = dist_vec[0]
+            heading = "l"
+        else:
+            print("not possible to move straight")
+            heading = "unknown"
+            movement = 0
+        
+        return heading, abs(movement)
+        
+
 
     def path_start_to_goal(self, start, direction, goals):
 
@@ -613,5 +660,6 @@ class Robot(object):
         self.maps[self.Page.g2].fill(0)
         self.maps[self.Page.f2].fill(0)
         self.maps[self.Page.nstatus2].fill(False)
+        self.timesteps.clear
 
         return

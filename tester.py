@@ -61,7 +61,7 @@ for maze in mazefiles:
     for alg in algs:
         #testrobot = Robot(testmaze.dim,alg)
         matrixrun = 0
-        for eval_run in range(100):
+        for eval_run in range(1):
            # testrobot = Robot(testmaze.dim)
             matrixrun += 1
             total_trips += 1

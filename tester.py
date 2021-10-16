@@ -25,10 +25,13 @@ class DMode(IntEnum):
             HEURISTIC_FULL = 2
             HEURISTIC_GOALS = 3
 
-#mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt']
-#mazefiles = ['test_maze_01b.txt', 'test_maze_02b.txt']
-mazefiles = ['test_maze_03c.txt']
-algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
+if 1:
+    mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_01b.txt', 'test_maze_02b.txt', 'test_maze_03b.txt', 'test_maze_03c.txt', 'test_maze_03.txt']
+    algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
+else:
+    algs =[DMode.RANDOM_GOALS]
+    mazefiles = ["test_maze_01.txt"]
+
 pdcols = ['Alg','Trip','Maze', 'Run1', 'Run2', 'Score', 'Coverage']
 
 
@@ -39,7 +42,7 @@ max_time = 2000 #1000
 train_score_mult = 1/30.
 
 # Create a maze based on input argument on command line.testmaze = Maze( str(sys.argv[1]) )
-testmaze = Maze('test_maze_03.txt')
+#mazeforanim = Maze('test_maze_03.txt')
 
 # Intitialize a robot; robot receives info about maze dimensions.
 #testrobot = Robot(testmaze.dim)
@@ -47,7 +50,7 @@ testmaze = Maze('test_maze_03.txt')
 #create animation
 animation = False
 if animation:
-    mazeanim = MazeAnimation(testmaze,[0,0],"up", 60)
+    mazeanim = MazeAnimation(mazeforanim,[0,0],"up", 80)
     mazeanim.showmaze()
 
 stats = []
@@ -61,7 +64,7 @@ for maze in mazefiles:
     for alg in algs:
         #testrobot = Robot(testmaze.dim,alg)
         matrixrun = 0
-        for eval_run in range(100):
+        for eval_run in range(2):
            # testrobot = Robot(testmaze.dim)
             matrixrun += 1
             total_trips += 1
@@ -196,3 +199,6 @@ out = df.to_json(orient='index')
 with open('results.json', 'w') as f:
     f.write(out)
 print("Done with", matrixrun,"run")
+
+if animation:  
+    mazeanim.window.exitonclick()

@@ -80,7 +80,6 @@ class Robot(object):
             g2 = 7
             f2 = 8
             nstatus2 = 9
-            parent = 10
 
         self.Page = Page
 
@@ -178,7 +177,7 @@ class Robot(object):
                     self.run2 = True
                     self.pos["node"] = self.start
                     self.pos["heading"] = self.start_heading
-                    self.timesteps_counter = self.path_start_to_goal(self.pos["node"], self.pos["heading"], self.goals)
+                    self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], self.goals)
                     return "Reset", "Reset", 0
 
         # print("nodes_to_check:", self.nodes_to_check)
@@ -197,25 +196,16 @@ class Robot(object):
                 if self.dmode in [ self.dmode.HEURISTIC_FULL,
                                 self.dmode.HEURISTIC_GOALS
                                 ]:
-                    timestep = (self.path_start_to_goal(self.pos["node"], 
+                    timestep = (self.find_best_path(self.pos["node"], 
                                 self.pos["heading"], [node])
                                 + self.maps[self.Page.h1][tuple(node)]
                                 )
-                    if not timesteps:
-                        timesteps.append({"node":node, "timestep": timestep})
-                    if timestep < timesteps[0]["timestep"]:
-                        timesteps.clear()
-                        timesteps.append({"node":node, "timestep": timestep})
-                    if timestep == timesteps[0]["timestep"]:
-                        timesteps.append({"node":node, "timestep": timestep})
-
-
                 else:
-                    timestep = self.path_start_to_goal(
+                    timestep = self.find_best_path(
                         self.pos["node"], self.pos["heading"], [node]
                         )
-                    if not timesteps:
-                        timesteps.append({"node":node, "timestep": timestep})
+                if not timesteps:
+                    timesteps.append({"node":node, "timestep": timestep})
                     if timestep < timesteps[0]["timestep"]:
                         timesteps.clear()
                         timesteps.append({"node":node, "timestep": timestep})
@@ -226,15 +216,16 @@ class Robot(object):
                 node_to_go = random.choice(timesteps)["node"]
             # print("node_to_go:", node_to_go)
 
-            self.timesteps_counter = self.path_start_to_goal(
+            self.timesteps_counter = self.find_best_path(
                 self.pos["node"], self.pos["heading"], [node_to_go]
             )
 
-        rotation, movement, heading, move_to = self.timesteps[len(self.timesteps) - 
-                                                self.timesteps_counter]
+        rotation, movement, heading, move_to = self.timesteps[
+            len(self.timesteps) - self.timesteps_counter
+            ]
         self.timesteps_counter -= 1
 
-        print("moves:", self.pos["node"], " to ", move_to)
+        print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1
@@ -263,13 +254,13 @@ class Robot(object):
             heading = self.dir_sensors[self.pos["heading"]][idx]
 
             for i in range(dist):  # skipped if sensor gives 0 distance
-                current_node = list(np.array(self.pos["node"]) + 
-                (i * np.array(self.dir_move[heading])))
+                current_node = (np.array(self.pos["node"]) + 
+                (i * np.array(self.dir_move[heading]))).tolist()
 
                 if (self.maps[self.Page.walls][tuple(current_node)] & self.dir_int[heading]) == 0:
                     self.maps[self.Page.walls][tuple(current_node)] += self.dir_int[heading]
 
-                next_node = list(np.array(current_node) + np.array(self.dir_move[heading]))
+                next_node = (np.array(current_node) + np.array(self.dir_move[heading])).tolist()
 
                 if (self.maps[self.Page.nstatus1][tuple(next_node)]== self.nstatus["closed"]):
                     if (self.maps[self.Page.walls][tuple(next_node)] & self.dir_int[self.dir_reverse[heading]]) == 0:
@@ -298,16 +289,18 @@ class Robot(object):
         
         return
 
-    def path_finding(self, start, heading, goals):
+    def find_best_path(self, start, heading, goals):
         
         open_nodes = []
         goal_found = False
         single_goal_node =[]
 
+        parents = np.ndarray(shape=(self.maze_dim, self.maze_dim), dtype=object)
+
         curr_node = start
         curr_heading = heading
 
-        self.reset_heuristic()
+        self.reset_pathfinder_maps()
         self.generate_h_cost(goals, self.maps[self.Page.h2])
 
         # set g_cost 0 for start node
@@ -316,18 +309,18 @@ class Robot(object):
         # calculate f_cost = g_cost + h_cost for start node
         self.maps[self.Page.f2][tuple(curr_node)] = self.maps[self.Page.g2][tuple(curr_node)] + self.maps[self.Page.h2][tuple(curr_node)]
         # add start node to open list
-        open_nodes.append({"nodes":curr_node, "heading": curr_heading})
+        open_nodes.append(curr_node)
         self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
 
         while not goal_found:
             for heading in self.dir_move.keys():
-                distance = self.dist_to_wall(self, curr_node, curr_heading)
+                distance = self.dist_to_wall(curr_node, heading)
             # cap distance until self.max_move
-                if distance < self.max_move:
+                if distance > self.max_move:
                     distance = self.max_move
                 
                 for i in range(1, distance + 1):
-                    next_node = list(np.array(curr_node) + (i * np.array(self.dir_move[heading])))
+                    next_node = (np.array(curr_node) + (i * np.array(self.dir_move[heading]))).tolist()
                     
                     # skip neighbour node if already evaluated(done)
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["done"]:
@@ -340,10 +333,12 @@ class Robot(object):
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
                         # add parent node
-                        self.maps[self.Page.parent][tuple(next_node)] = curr_node
+                        #print("curr_node:", curr_node,"next_node:", next_node)
+                        #self.maps[self.Page.parent][tuple(next_node)] = curr_node
+                        parents[tuple(next_node)] = curr_node
                         # add  node to open list
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]:
-                        open.nodes.append({"nodes":next_node, "heading": heading})
+                        open_nodes.append(next_node)
                         self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
                     if list(next_node) in goals:
                         goal_found = True
@@ -356,8 +351,8 @@ class Robot(object):
 
             # mark node already evaluates as done and removed from open_nodes list
             self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["done"]
-            for idx,item in enumerate(open_nodes):
-                if item == curr_node:
+            for idx,node in enumerate(open_nodes):
+                if node == curr_node:
                     open_nodes.pop(idx)
 
             min_f_nodes = []
@@ -387,24 +382,52 @@ class Robot(object):
         timestep = 0
 
         while True:
-            parent_node = self.maps[self.Page.parent][tuple(parent_node)]
+            parent_node = parents[tuple(parent_node)]
             path.insert(0,parent_node)
-            timestep += timestep
             if parent_node == start:
                 break
+            timestep += 1
         
         for idx,node in enumerate(path[:-1]):
             next_node = path[idx+1]
             direction, movement = self.get_head_mov(next_node,node)
             try:
-                rotation = self.rotation[self.dir_sensors[heading].index(direction)]
+                rotation = self.rotation[self.dir_sensors[curr_heading].index(direction)]
+                curr_heading = direction
             except:
                 rotation = 0  # indicator for backward movement
                 movement = - movement
+                curr_heading = self.dir_reverse[direction]
             
-            self.timesteps.append({"rotation": rotation, "movement": movement})
+            #curr_heading = direction self.dir_reverse
+            #self.timesteps.append({"rotation": rotation, "movement": movement})
+            self.timesteps.append((rotation, movement,curr_heading, next_node))
             
-        return timestep
+        #print("length of timesteps:", len(self.timesteps), " timesteps:", self.timesteps)
+        return len(self.timesteps)
+
+
+    def dist_to_wall(self, node, heading):
+        """
+        Returns a number designating the number of open cells to the nearest
+        wall in the indicated direction. Cell is input as a list. Directions
+        may be input as a single letter 'u', 'r', 'd', 'l', or complete words
+        'up', 'right', 'down', 'left'.
+        """
+
+        sensing = True
+        distance = 0
+        curr_node = node.copy() # make copy to preserve original
+        while sensing:
+            # check if  permissible 
+            if self.maps[self.Page.walls][tuple(curr_node)] & self.dir_int[heading] != 0:
+                distance += 1
+                curr_node[0] += self.dir_move[heading][0]
+                curr_node[1] += self.dir_move[heading][1]
+            else:
+                sensing = False
+
+        return distance
 
     def get_head_mov(self, target, start):
 
@@ -429,237 +452,14 @@ class Robot(object):
         return heading, abs(movement)
         
 
-
-    def path_start_to_goal(self, start, direction, goals):
-
-        # print("--------------------------------------------------")
-        # print("path from ",start, "to", goals, "heading:", direction)
-        # print("--------------------------------------------------")
-        # self.run2_moves_idx = 0
-        # self.run2 = FALSE
-        self.reset_heuristic()
-
-        #print("walls:", self.maps[self.Page.walls])
-        # print("start:", start, "goals:", goals)
-
-        routes = []
-        node = start
-        all_routes_checked = False
-
-        class Nodetype(IntEnum):
-            CLOSED = 0
-            OPEN = 1
-            GOAL = 2
-
-        self.generate_h_cost(goals, self.maps[self.Page.h2])
-        
-        g_cost = 0
-        f_lowest = self.maps[self.Page.h2][tuple(node)] + g_cost
-        self.maps[self.Page.f2][tuple(node)] = f_lowest
-        self.maps[self.Page.nstatus2][tuple(node)] = self.nstatus["done"]
-
-        routes.append(
-            {
-                "path": [start],
-                "end_heading": direction,
-                "rotation": 0,
-                "movement": 0,
-                "g_cost": g_cost,
-                "f_cost": f_lowest,
-                "moves": [],
-                "nodetype": Nodetype.OPEN,
-            }
-        )
-        routes_idx = 0
-        hit_goal = False
-
-        while not all_routes_checked:
-
-            fork = 0
-            copy_route = copy.deepcopy(routes[routes_idx])
-
-            # create possible routes with forks
-            for heading in self.dir_move.keys():
-                # skip node not permissible given the heading
-                if self.maps[self.Page.walls][tuple(node)] & self.dir_int[heading] == 0:
-                    continue
-
-                next_node = list(np.array(node) + np.array(self.dir_move[heading]))
-
-                # skip node already evaluated before
-                if (
-                    self.maps[self.Page.nstatus2][tuple(next_node)]
-                    == self.nstatus["done"]
-                ):
-                    continue
-
-                fork += 1
-
-                if fork > 1:
-                    routes.append(copy.deepcopy(copy_route))
-                    routes_idx = -1
-
-                routes[routes_idx]["path"].append(next_node)
-                prev_rotation = routes[routes_idx]["rotation"]
-
-                try:
-                    rotation = self.rotation[
-                        self.dir_sensors[routes[routes_idx]["end_heading"]].index(
-                            heading
-                        )
-                    ]
-                    reversed_rotation = self.rotation[
-                        self.dir_sensors[
-                            self.dir_reverse[routes[routes_idx]["end_heading"]]
-                        ].index(heading)
-                    ]
-                except:
-                    rotation = 180  # indicator for backward movement
-                    reversed_rotation = None
-
-                if routes[routes_idx]["end_heading"] == heading:
-                    routes[routes_idx]["movement"] += 1
-                    if routes[routes_idx]["movement"] > self.max_move:
-                        if prev_rotation == 180:
-                            routes[routes_idx]["moves"].append(
-                                (
-                                    0,
-                                    -self.max_move,
-                                    self.dir_reverse[routes[routes_idx]["end_heading"]],
-                                    node,
-                                )
-                            )
-                        else:
-                            routes[routes_idx]["moves"].append(
-                                (
-                                    prev_rotation,
-                                    self.max_move,
-                                    routes[routes_idx]["end_heading"],
-                                    node,
-                                )
-                            )
-                            routes[routes_idx]["rotation"] = 0
-                        routes[routes_idx]["movement"] = 1
-                        routes[routes_idx]["g_cost"] += 1
-                else:
-                    if routes[routes_idx]["movement"] == 0:
-                        routes[routes_idx]["rotation"] = rotation
-                    else:
-                        if prev_rotation == 180:
-                            routes[routes_idx]["moves"].append(
-                                (
-                                    0,
-                                    -routes[routes_idx]["movement"],
-                                    self.dir_reverse[routes[routes_idx]["end_heading"]],
-                                    node,
-                                )
-                            )
-                            routes[routes_idx]["rotation"] = reversed_rotation
-                        else:
-                            routes[routes_idx]["moves"].append(
-                                (
-                                    prev_rotation,
-                                    routes[routes_idx]["movement"],
-                                    routes[routes_idx]["end_heading"],
-                                    node,
-                                )
-                            )
-                            routes[routes_idx]["rotation"] = rotation
-
-                    routes[routes_idx]["movement"] = 1
-                    routes[routes_idx]["g_cost"] += 1
-
-                routes[routes_idx]["end_heading"] = heading
-                routes[routes_idx]["f_cost"] = (
-                    routes[routes_idx]["g_cost"]
-                    + self.maps[self.Page.h2][tuple(next_node)]
-                )
-
-                if next_node in goals:
-                    routes[routes_idx]["nodetype"] = Nodetype.GOAL
-                    if routes[routes_idx]["rotation"] == 180:  # prev_rotation ==
-                        routes[routes_idx]["moves"].append(
-                            (
-                                0,
-                                -routes[routes_idx]["movement"],
-                                self.dir_reverse[routes[routes_idx]["end_heading"]],
-                                next_node,
-                            )
-                        )
-                    else:
-                        routes[routes_idx]["moves"].append(
-                            (
-                                routes[routes_idx]["rotation"],
-                                routes[routes_idx]["movement"],
-                                routes[routes_idx]["end_heading"],
-                                next_node,
-                            )
-                        )
-                    hit_goal = True
-                    lowest_f = routes[routes_idx]["f_cost"]
-                else:
-                    routes[routes_idx]["nodetype"] = Nodetype.OPEN
-
-            # print("Node:", node, " is done")
-            self.maps[self.Page.nstatus2][tuple(node)] = self.nstatus["done"]
-
-            if fork == 0:  # remove path with dead end
-                del routes[routes_idx]
-
-            if not routes:
-                break
-
-            routes_idx = -1
-            f_min = 1000  # set to max steps
-
-            # find routewith minimum f_cost
-            for idx, item in enumerate(routes):
-                # print("route:", idx,"\n",item)
-                if item["nodetype"] == Nodetype.GOAL:
-                    continue
-                if item["f_cost"] < f_min:
-                    if hit_goal and (item["f_cost"] > lowest_f):
-                        continue
-                    f_min = item["f_cost"]
-                    routes_idx = idx
-
-            # find last node in the route with minimum f_cost to be discovered further
-            if routes_idx != -1:
-                node = routes[routes_idx]["path"][-1]
-            # print("all_routes NOT checked")
-            else:
-                all_routes_checked = True
-                # print("all_routes_checked")
-
-            copy_route = []
-
-        min_g = None
-        routes_idx = -1
-        for idx, route in enumerate(routes):
-            # print("route:",idx,"\n",route)
-            if route["nodetype"] == Nodetype.GOAL:
-                if min_g is None:
-                    min_g = route["g_cost"]
-                    routes_idx = idx
-                if min_g > route["g_cost"]:
-                    min_g = route["g_cost"]
-                    routes_idx = idx
-
-        if routes_idx != -1:
-            self.timesteps = copy.deepcopy(routes[routes_idx]["moves"])
-            # print("lenght of timesteps:", len(self.timesteps))
-            # print ("timesteps: \n", self.timesteps)
-            # print("*********************************************************")
-            #
-        #print("timesteps:", len(self.timesteps))
-        return len(self.timesteps)
-
-    def reset_heuristic(self):
+    def reset_pathfinder_maps(self):
 
         self.maps[self.Page.h2].fill(0)
         self.maps[self.Page.g2].fill(0)
         self.maps[self.Page.f2].fill(0)
         self.maps[self.Page.nstatus2].fill(False)
-        self.timesteps.clear
+
+        self.timesteps = []
+        self.timesteps_counter = 0
 
         return

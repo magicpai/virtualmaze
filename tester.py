@@ -25,36 +25,38 @@ class DMode(IntEnum):
             HEURISTIC_FULL = 2
             HEURISTIC_GOALS = 3
 
-if 1:
-    mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_01b.txt', 'test_maze_02b.txt', 'test_maze_03b.txt', 'test_maze_03c.txt', 'test_maze_03.txt']
+if 0:
+    mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_01b.txt', 'test_maze_02b.txt', 'test_maze_03b.txt', 'test_maze_03c.txt']
     algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
+    attempts = 10
 else:
     algs =[DMode.RANDOM_GOALS]
     mazefiles = ["test_maze_01.txt"]
+    mazeforanim = Maze(mazefiles[0])
+    attempts = 1
+
+total_trips = len(mazefiles) * len(algs)* attempts
 
 pdcols = ['Alg','Trip','Maze', 'Run1', 'Run2', 'Score', 'Coverage']
 
 
-
-
 # test and score parameters
-max_time = 2000 #1000
+max_time = 1000 #1000
 train_score_mult = 1/30.
 
 # Create a maze based on input argument on command line.testmaze = Maze( str(sys.argv[1]) )
-#mazeforanim = Maze('test_maze_03.txt')
 
 # Intitialize a robot; robot receives info about maze dimensions.
 #testrobot = Robot(testmaze.dim)
 
 #create animation
-animation = False
+animation = True
 if animation:
     mazeanim = MazeAnimation(mazeforanim,[0,0],"up", 80)
     mazeanim.showmaze()
 
 stats = []
-total_trips = 0
+trip = 0
 start = timeit.default_timer()
 
 for maze in mazefiles:
@@ -62,12 +64,11 @@ for maze in mazefiles:
     tablenodes = np.full((1, testmaze.dim, testmaze.dim), 0, dtype=int)
     #for alg in range(len(DMode)):
     for alg in algs:
-        #testrobot = Robot(testmaze.dim,alg)
-        matrixrun = 0
-        for eval_run in range(2):
+        algtrip = 0
+        for eval_run in range(attempts):
            # testrobot = Robot(testmaze.dim)
-            matrixrun += 1
-            total_trips += 1
+            algtrip += 1
+            trip += 1
             tablenodes[0].fill(0)
 
             testrobot = Robot(testmaze.dim,alg)
@@ -141,12 +142,12 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], robot_pos['heading']):
                                 robot_pos['location'][0] += dir_move[robot_pos['heading']][0]
                                 robot_pos['location'][1] += dir_move[robot_pos['heading']][1]
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement -= 1
                                 
                             else:
                                 print ("Movement stopped by wall.")
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 run_active = False
                                 movement = 0
                                 break
@@ -156,7 +157,7 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], rev_heading):
                                 robot_pos['location'][0] += dir_move[rev_heading][0]
                                 robot_pos['location'][1] += dir_move[rev_heading][1]
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement += 1
                                 #print("ROBOT POS AFTER:",robot_pos['location'] )
                             else:
@@ -185,8 +186,8 @@ for maze in mazefiles:
                     print ("Task complete! Score: {:4.3f}".format(runtimes[1] + train_score_mult*runtimes[0]))
                     n_zeros = np.count_nonzero(tablenodes[0] != 0) 
                     coverage = round((n_zeros / (testmaze.dim * testmaze.dim)) * 100, 2)
-                    stats.append([alg, matrixrun, maze, runtimes[0], runtimes[1], round(runtimes[1] + train_score_mult*runtimes[0],2), coverage])
-                    print("Total trips ",total_trips)
+                    stats.append([alg, algtrip, maze, runtimes[0], runtimes[1], round(runtimes[1] + train_score_mult*runtimes[0],2), coverage])
+                    print("Trip:",trip, " from total:", total_trips)
 
                     n_zeros = np.count_nonzero(tablenodes[0] == 0) 
 
@@ -198,7 +199,6 @@ out = df.to_json(orient='index')
 
 with open('results.json', 'w') as f:
     f.write(out)
-print("Done with", matrixrun,"run")
 
 if animation:  
     mazeanim.window.exitonclick()

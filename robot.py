@@ -225,7 +225,7 @@ class Robot(object):
             ]
         self.timesteps_counter -= 1
 
-        print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
+        #print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1

@@ -25,7 +25,7 @@ class DMode(IntEnum):
             HEURISTIC_FULL = 2
             HEURISTIC_GOALS = 3
 
-if 0:
+if 1:
     mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_01b.txt', 'test_maze_02b.txt', 'test_maze_03b.txt', 'test_maze_03c.txt']
     algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
     attempts = 10
@@ -50,7 +50,7 @@ train_score_mult = 1/30.
 #testrobot = Robot(testmaze.dim)
 
 #create animation
-animation = True
+animation = False
 if animation:
     mazeanim = MazeAnimation(mazeforanim,[0,0],"up", 80)
     mazeanim.showmaze()

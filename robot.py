@@ -200,12 +200,22 @@ class Robot(object):
                                 self.pos["heading"], [node])
                                 + self.maps[self.Page.h1][tuple(node)]
                                 )
+                    if not timesteps:
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep < timesteps[0]["timestep"]:
+                        timesteps.clear()
+                        timesteps.append({"node":node, "timestep": timestep})
+                    if timestep == timesteps[0]["timestep"]:
+                        timesteps.append({"node":node, "timestep": timestep})
+
+
                 else:
                     timestep = self.find_best_path(
                         self.pos["node"], self.pos["heading"], [node]
                         )
-                if not timesteps:
-                    timesteps.append({"node":node, "timestep": timestep})
+                    
+                    if not timesteps:
+                        timesteps.append({"node":node, "timestep": timestep})
                     if timestep < timesteps[0]["timestep"]:
                         timesteps.clear()
                         timesteps.append({"node":node, "timestep": timestep})

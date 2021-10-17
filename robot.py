@@ -202,6 +202,7 @@ class Robot(object):
                                 )
                     if not timesteps:
                         timesteps.append({"node":node, "timestep": timestep})
+                        continue
                     if timestep < timesteps[0]["timestep"]:
                         timesteps.clear()
                         timesteps.append({"node":node, "timestep": timestep})
@@ -215,6 +216,7 @@ class Robot(object):
                         )
                     if not timesteps:
                         timesteps.append({"node":node, "timestep": timestep})
+                        continue
                     if timestep < timesteps[0]["timestep"]:
                         timesteps.clear()
                         timesteps.append({"node":node, "timestep": timestep})

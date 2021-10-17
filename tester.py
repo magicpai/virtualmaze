@@ -50,7 +50,7 @@ train_score_mult = 1/30.
 #testrobot = Robot(testmaze.dim)
 
 #create animation
-animation = True
+animation = False
 if animation:
     mazeanim = MazeAnimation(mazeforanim,[0,0],"up", 80)
     mazeanim.showmaze()
@@ -142,12 +142,12 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], robot_pos['heading']):
                                 robot_pos['location'][0] += dir_move[robot_pos['heading']][0]
                                 robot_pos['location'][1] += dir_move[robot_pos['heading']][1]
-                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement -= 1
                                 
                             else:
                                 print ("Movement stopped by wall.")
-                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 run_active = False
                                 movement = 0
                                 break
@@ -157,7 +157,7 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], rev_heading):
                                 robot_pos['location'][0] += dir_move[rev_heading][0]
                                 robot_pos['location'][1] += dir_move[rev_heading][1]
-                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement += 1
                                 #print("ROBOT POS AFTER:",robot_pos['location'] )
                             else:

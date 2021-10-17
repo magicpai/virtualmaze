@@ -35,7 +35,7 @@ class MazeAnimation():
         
         self.mapper = turtle.Turtle()
         self.mapper.shape('turtle')
-        self.mapper.speed(0)
+        self.mapper.speed(1)
         self.mapper.color('blue')
         self.mapper.pensize(2)
         self.mapper.penup()

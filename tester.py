@@ -25,7 +25,7 @@ class DMode(IntEnum):
             HEURISTIC_FULL = 2
             HEURISTIC_GOALS = 3
 
-if 1:
+if 0:
     mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_01b.txt', 'test_maze_02b.txt', 'test_maze_03b.txt', 'test_maze_03c.txt']
     algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
     attempts = 10
@@ -50,7 +50,7 @@ train_score_mult = 1/30.
 #testrobot = Robot(testmaze.dim)
 
 #create animation
-animation = False
+animation = True
 if animation:
     mazeanim = MazeAnimation(mazeforanim,[0,0],"up", 80)
     mazeanim.showmaze()
@@ -96,12 +96,9 @@ for maze in mazefiles:
                     sensing = [testmaze.dist_to_wall(robot_pos['location'], heading)
                             for heading in dir_sensors[robot_pos['heading']]]
                     
-                    tablenodes[0][tuple(robot_pos['location'])] += 1
+                    #tablenodes[0][tuple(robot_pos['location'])] += 1
 
-                    if 0:
-                        rotation, movement, freq = testrobot.discover_map(sensing)
-                    else:
-                        rotation, movement, freq = testrobot.next_move(sensing)
+                    rotation, movement = testrobot.next_move(sensing)
                     #print("Tester rotation,move:",rotation,",",movement)
                     
                     # check for a reset
@@ -167,7 +164,9 @@ for maze in mazefiles:
                                 movement = 0
                     
                     if animation:
-                        mazeanim.plot_move(robot_pos['heading'],robot_pos['location'],run, freq)
+                        tablenodes[0][tuple(robot_pos['location'])] += 1
+                        mazeanim.plot_move(robot_pos['heading'],robot_pos['location'],run, tablenodes[0][tuple(robot_pos['location'])])
+
                     
                     # n_zeros = np.count_nonzero(tablenodes[0] != 0) 
                     # coverage = (n_zeros / (testmaze.dim * testmaze.dim)) * 100

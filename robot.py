@@ -178,7 +178,7 @@ class Robot(object):
                     self.pos["node"] = self.start
                     self.pos["heading"] = self.start_heading
                     self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], self.goals)
-                    return "Reset", "Reset", 0
+                    return "Reset", "Reset"
 
         # print("nodes_to_check:", self.nodes_to_check)
 
@@ -235,7 +235,7 @@ class Robot(object):
 
         # for item in self.nodes_to_check:print(item)
 
-        return rotation, movement, self.maps[self.Page.visits][tuple(move_to)]
+        return rotation, movement
 
     def fill_map_heuristic(self, sensors):
 

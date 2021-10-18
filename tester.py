@@ -25,13 +25,12 @@ class DMode(IntEnum):
             HEURISTIC_FULL = 2
             HEURISTIC_GOALS = 3
 
-if 0:
+if 1:
     mazefiles = ['test_maze_01.txt', 'test_maze_02.txt','test_maze_03.txt','test_maze_04.txt', 'test_maze_05.txt', 'test_maze_06.txt', 'test_maze_07.txt','test_maze_08.txt']
     algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
-    attempts = 10
+    attempts = 100
 else:
     algs =[DMode.RANDOM_GOALS]
-    #algs =[DMode.RANDOM_FULL,DMode.RANDOM_GOALS, DMode.HEURISTIC_FULL, DMode.HEURISTIC_GOALS]
     mazefiles = ["test_maze_01.txt"]
     mazeforanim = Maze(mazefiles[0])
     attempts = 1
@@ -140,12 +139,12 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], robot_pos['heading']):
                                 robot_pos['location'][0] += dir_move[robot_pos['heading']][0]
                                 robot_pos['location'][1] += dir_move[robot_pos['heading']][1]
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement -= 1
                                 
                             else:
                                 print ("Movement stopped by wall.")
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 run_active = False
                                 movement = 0
                                 break
@@ -155,7 +154,7 @@ for maze in mazefiles:
                             if testmaze.is_permissible(robot_pos['location'], rev_heading):
                                 robot_pos['location'][0] += dir_move[rev_heading][0]
                                 robot_pos['location'][1] += dir_move[rev_heading][1]
-                                print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                #print("robot pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                 movement += 1
                                 #print("ROBOT POS AFTER:",robot_pos['location'] )
                             else:

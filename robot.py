@@ -185,12 +185,16 @@ class Robot(object):
         # pick top most node with lowest f_cost from the list
         if self.timesteps_counter == 0:
 
+            #print("Enter timesteps_counter = 0")
             timesteps = []
+            node_to_go =  None
 
             for idx, node in enumerate(self.open_nodes):
 
+               # print("node under checked:", node)
                 if( list(node) in self.goals and self.dmode in [self.dmode.RANDOM_GOALS, self.dmode.HEURISTIC_GOALS]):
                   node_to_go = node
+                 # print("go to goal", node)
                   break
 
                 if self.dmode in [ self.dmode.HEURISTIC_FULL,
@@ -207,13 +211,14 @@ class Robot(object):
                     
                 if not timesteps:
                     timesteps.append({"node":node, "timestep": timestep})
+                    continue
                 if timestep < timesteps[0]["timestep"]:
                     timesteps.clear()
                     timesteps.append({"node":node, "timestep": timestep})
                 if timestep == timesteps[0]["timestep"]:
                     timesteps.append({"node":node, "timestep": timestep})
 
-            if timesteps:
+            if node_to_go is None:
                 node_to_go = random.choice(timesteps)["node"]
             # print("node_to_go:", node_to_go)
 
@@ -226,7 +231,7 @@ class Robot(object):
             ]
         self.timesteps_counter -= 1
 
-        print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
+        #print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1
@@ -277,6 +282,8 @@ class Robot(object):
                         self.maps[self.Page.h1][tuple(next_node)]
                         + self.maps[self.Page.g1][tuple(next_node)]
                     )
+                    #if list(next_node) in self.goals:
+                        #print("One of goals reached")
 
                     self.open_nodes.append(next_node)
                     #print("next_node:", next_node)
@@ -405,6 +412,7 @@ class Robot(object):
             self.timesteps.append((rotation, movement,curr_heading, next_node))
             
         #print("length of timesteps:", len(self.timesteps), " timesteps:", self.timesteps)
+
         return len(self.timesteps)
 
 

@@ -10,7 +10,7 @@ import numpy as np
 import itertools
 
 
-testmaze = Maze('test_maze_08.txt')
+testmaze = Maze('test_maze_07.txt')
 testrobot = Robot(testmaze.dim)
 
 mazeanim = MazeAnimation(testmaze,[0,0],"up", 60)

@@ -2,3 +2,4 @@ logs.txt
 *.pyc
 .DS_Store
 results.json
+.vscode/launch.json

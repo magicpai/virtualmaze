@@ -14,10 +14,7 @@ class MazeAnimation():
         
         #self.maze_center = [(maze_dim/2)-1, maze_dim/2]
         
-        if 1:
-            self.goals = [[product[0], product[1]] for product in itertools.product(self.maze_center, repeat=2)]
-        else:
-            self.goals =[[1,1]]
+        self.goals = [[product[0], product[1]] for product in itertools.product(self.maze_center, repeat=2)]
         
         self.start = start
         self.heading = heading
@@ -44,9 +41,13 @@ class MazeAnimation():
         self.writer = turtle.Turtle()
         self.writer.hideturtle()
         self.writer.speed(0)
-        self.writer.color('black','white')
-        self.style= ('Arial', 13)
         self.writer.up()
+        
+        self.mapper_font= ('Arial', 10)
+        self.finisher_font= ('Arial', 12)
+        self.mapper_text_clr = 'blue'
+        self.finisher_text_clr = 'green'
+        self.mapper_circle = 10
 
         self.finisher = turtle.Turtle()
         self.finisher.shape('turtle')
@@ -55,6 +56,8 @@ class MazeAnimation():
         self.finisher.pensize(4)
         self.finisher.penup()
         self.finisher.hideturtle()
+
+        self.timestep = 0
 
     def showmaze(self):
         #print("showmaze() is called")
@@ -80,6 +83,11 @@ class MazeAnimation():
                     self.wally.pendown()
                     self.wally.forward(self.sq_size)
                     self.wally.penup()
+
+                    self.wally.goto(self.origin + self.sq_size * x +self.sq_size / 3, self.origin - 40)
+                    self.wally.down()
+                    self.wally.write(x,font=('Arial', 20), align='left')
+                    self.wally.penup()
                 # only check left wall if on leftmost column
                 if x == 0 and not self.maze.is_permissible([x,y], 'left'):
                     self.wally.goto(self.origin, self.origin + self.sq_size * y)
@@ -87,6 +95,12 @@ class MazeAnimation():
                     self.wally.pendown()
                     self.wally.forward(self.sq_size)
                     self.wally.penup()
+                    
+                    self.wally.goto(self.origin-40, self.origin + self.sq_size * y + self.sq_size / 3 )
+                    self.wally.down()
+                    self.wally.write(y,font=('Arial', 20), align='left')
+                    self.wally.penup()
+
      
         # mark the start
         self.wally.color('black', 'blue')
@@ -118,9 +132,10 @@ class MazeAnimation():
         self.mapper.setheading(self.turtle_move[self.heading])
         self.mapper.showturtle()
     
+        self.writer.color(self.mapper_text_clr,'white')
         self.writer.goto(self.origin + self.start[0]*self.sq_size + self.sq_size/4, self.origin + self.start[1]*self.sq_size +self.sq_size/8)
         self.writer.down()
-        self.writer.write(1,font=self.style, align='left')
+        self.writer.write(1,font=self.mapper_font, align='left')
         self.mapper.penup()
         
         self.finisher.setpos(self.origin + self.start[0] * self.sq_size + self.sq_size/2 + 4, self.origin + self.start[1] * self.sq_size + self.sq_size/2)
@@ -135,12 +150,14 @@ class MazeAnimation():
             self.mapper.pendown()
             self.mapper.setheading(self.turtle_move[heading])
             self.mapper.goto(self.origin + self.sq_size/2 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            
             self.writer.penup()
+            self.writer.color(self.mapper_text_clr,'white')
             self.writer.goto(self.origin + move_to[0]*self.sq_size + self.sq_size/4, self.origin + move_to[1]*self.sq_size + self.sq_size/8)
             self.writer.begin_fill()
-            self.writer.circle(15)
+            self.writer.circle(self.mapper_circle)
             self.writer.end_fill()
-            self.writer.write(freq,font=self.style, align='left')
+            self.writer.write(freq,font=self.mapper_font, align='left')
             self.mapper.penup()
         else:
             self.mapper.hideturtle()
@@ -148,4 +165,10 @@ class MazeAnimation():
             self.finisher.pendown()
             self.finisher.setheading(self.turtle_move[heading])
             self.finisher.goto(self.origin + self.sq_size/2 + 4 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+
+            self.timestep += 1
+            self.writer.color(self.finisher_text_clr, 'white')
+            self.writer.penup()
+            self.writer.goto(self.origin + self.sq_size/2 + 8 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            self.writer.write(self.timestep,font=self.finisher_font, align='left')
             self.finisher.penup()

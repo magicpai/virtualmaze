@@ -129,6 +129,8 @@ class Robot(object):
         self.open_nodes = []
         self.open_nodes.append(self.pos["node"])
 
+        self.basic_log = False
+
 
     def generate_h_cost(self, goals, heuristic=[]):
 
@@ -221,7 +223,7 @@ class Robot(object):
             if node_to_go is None:
                 node_to_go = random.choice(timesteps)["node"]
             # print("node_to_go:", node_to_go)
-
+                
             self.timesteps_counter = self.find_best_path(
                 self.pos["node"], self.pos["heading"], [node_to_go]
             )
@@ -231,7 +233,8 @@ class Robot(object):
             ]
         self.timesteps_counter -= 1
 
-        #print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
+        if self.basic_log:
+            print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1
@@ -335,13 +338,14 @@ class Robot(object):
                         break
                     
                     # update g_cost if new calculated value smaller than stored or no value stored before
-                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1)) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
+                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
                         
-                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1
+                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
                         # add parent node
-                        #print("curr_node:", curr_node,"next_node:", next_node)
+                        if self.basic_log:
+                            print("curr_node:", curr_node,"next_node:", next_node,"f_cost:",self.maps[self.Page.f2][tuple(next_node)],"h_cost:",self.maps[self.Page.h2][tuple(next_node)], "g_cost:", self.maps[self.Page.g2][tuple(next_node)])
                         #self.maps[self.Page.parent][tuple(next_node)] = curr_node
                         parents[tuple(next_node)] = curr_node
                         # add  node to open list
@@ -373,15 +377,20 @@ class Robot(object):
                     if f_cost < min_f_nodes[0]["f_cost"]:
                         min_f_nodes.clear()
                         min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
-                    if f_cost == min_f_nodes[0]["f_cost"]:
+                    elif f_cost == min_f_nodes[0]["f_cost"]:
                         if h_cost < min_f_nodes[0]["h_cost"]:
                             min_f_nodes.clear()
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
-                        if h_cost == min_f_nodes[0]["h_cost"]:
+                        elif h_cost == min_f_nodes[0]["h_cost"]:
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
             
+            if self.basic_log:
+                print("open_nodes:", open_nodes)
+                print ("min_f_nodes:", min_f_nodes)
             #choose min f_cost from open.nodes list
             curr_node = random.choice(min_f_nodes)["node"]
+            if self.basic_log:
+                print("choosen node:", curr_node)
 
         # out of while loops , now find best path
         path = []

@@ -7,7 +7,7 @@ from operator import itemgetter
 
 
 class Robot(object):
-    def __init__(self, maze_dim, alg = 0):
+    def __init__(self, maze_dim, alg =[]):
         """
         Use the initialization function to set up attributes that your robot
         will use to learn and navigate the maze. Some initial attributes are
@@ -88,17 +88,13 @@ class Robot(object):
         )
         self.generate_h_cost(self.goals, self.maps[self.Page.h1])
 
-        class DMode(IntEnum):
-            RANDOM_FULL = 0
-            RANDOM_GOALS = 1
-            HEURISTIC_FULL = 2
-            HEURISTIC_GOALS = 3
-
-        self.dmode = DMode(alg)
-
-        #print(self.dmode)
+        self.algs = ["SHORT_100", "SHORT_GOALS", "HEURISTC_100","HEURISTIC_GOALS"]
+        
+        if alg in self.algs:
+            self.alg = alg
+        else:
+            self.alg = "HEURISTIC_GOALS"
     
-
         self.f_max = 0
         self.goal_found = False
         self.run2 = False
@@ -174,7 +170,7 @@ class Robot(object):
 
         if not self.run2:
             self.fill_map_heuristic(sensors)
-            if (0 not in self.maps[self.Page.visits]) or (list(self.pos['node']) in self.goals and self.dmode in [self.dmode.RANDOM_GOALS, self.dmode.HEURISTIC_GOALS]):
+            if (0 not in self.maps[self.Page.visits]) or (list(self.pos['node']) in self.goals and self.alg in ["SHORT_GOALS","HEURISTIC_GOALS"]):
 
                     self.run2 = True
                     self.pos["node"] = self.start
@@ -182,26 +178,22 @@ class Robot(object):
                     self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], self.goals)
                     return "Reset", "Reset"
 
-        # print("nodes_to_check:", self.nodes_to_check)
 
         # pick top most node with lowest f_cost from the list
         if self.timesteps_counter == 0:
 
-            #print("Enter timesteps_counter = 0")
             timesteps = []
             node_to_go =  None
 
             for idx, node in enumerate(self.open_nodes):
 
                # print("node under checked:", node)
-                if( list(node) in self.goals and self.dmode in [self.dmode.RANDOM_GOALS, self.dmode.HEURISTIC_GOALS]):
+                if( list(node) in self.goals and self.alg in ["SHORT_GOALS", "HEURISTIC_GOALS"]):
                   node_to_go = node
                  # print("go to goal", node)
                   break
 
-                if self.dmode in [ self.dmode.HEURISTIC_FULL,
-                                self.dmode.HEURISTIC_GOALS
-                                ]:
+                if self.alg in ["HEURISTIC_FULL", "HEURISTIC_GOALS"]:
                     timestep = (self.find_best_path(self.pos["node"], 
                                 self.pos["heading"], [node])
                                 + self.maps[self.Page.h1][tuple(node)]
@@ -221,12 +213,13 @@ class Robot(object):
                     timesteps.append({"node":node, "timestep": timestep})
 
             if node_to_go is None:
-                node_to_go = random.choice(timesteps)["node"]
-            # print("node_to_go:", node_to_go)
-                
-            self.timesteps_counter = self.find_best_path(
-                self.pos["node"], self.pos["heading"], [node_to_go]
-            )
+                if timesteps:
+                    node_to_go = random.choice(timesteps)["node"]
+                else:
+                    print("all nodes are explored but goal is not found so robot stays at the current position")
+                    return 0,0
+            
+            self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], [node_to_go])
 
         rotation, movement, heading, move_to = self.timesteps[
             len(self.timesteps) - self.timesteps_counter
@@ -238,10 +231,6 @@ class Robot(object):
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1
-
-        #print("nodes seen:", len (self.nodes_to_check), "nodes visited:", np.count_nonzero(self.maps[self.Page.visits]))
-
-        # for item in self.nodes_to_check:print(item)
 
         return rotation, movement
 
@@ -285,11 +274,8 @@ class Robot(object):
                         self.maps[self.Page.h1][tuple(next_node)]
                         + self.maps[self.Page.g1][tuple(next_node)]
                     )
-                    #if list(next_node) in self.goals:
-                        #print("One of goals reached")
 
                     self.open_nodes.append(next_node)
-                    #print("next_node:", next_node)
 
                     self.maps[self.Page.nstatus1][tuple(next_node)] = self.nstatus["open"]
 
@@ -338,7 +324,7 @@ class Robot(object):
                         break
                     
                     # update g_cost if new calculated value smaller than stored or no value stored before
-                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
+                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i)) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
                         
                         self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
                         # calculate f_cost = g_cost + h_cost for start node

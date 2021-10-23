@@ -25,51 +25,65 @@ class MazeAnimation():
         self.start = start
         self.heading = heading
         
-        # Initialize node size and left corner coordinate and drawing screen 
+        # Initialize node size and left corner coordinate of the maze
         self.sq_size = sq_size
         self.origin = self.maze.dim * self.sq_size / -2
-        self.window = turtle.Screen()
         
+        # Intialize the window and drawing turtle.
+        self.window = turtle.Screen()
         self.wally = turtle.Turtle()
+        self.wally.shape("turtle")
+        self.wally.color('black')
         self.wally.speed(0)
         self.wally.pensize(3)
         self.wally.hideturtle()
         self.wally.penup()
-        
-        self.mapper = turtle.Turtle()
-        self.mapper.shape('turtle')
-        self.mapper.speed(0)
-        self.mapper.color('blue')
-        self.mapper.pensize(2)
-        self.mapper.penup()
-        self.mapper.hideturtle()
 
+        #Turtle for textwriting
         self.writer = turtle.Turtle()
-        self.writer.hideturtle()
         self.writer.speed(0)
-        self.writer.up()
-        
-        self.mapper_font= ('Arial', 10)
-        self.finisher_font= ('Arial', 12)
-        self.mapper_text_clr = 'blue'
-        self.finisher_text_clr = 'green'
-        self.mapper_circle = 8
+        self.writer.pensize(1)
+        self.writer.hideturtle()
+        self.writer.penup()
 
+        # Set few font style and colors
+        self.run1_font= ('Arial', 10)
+        self.run2_font= ('Arial', 12)
+        self.run1_color = 'blue'
+        self.run2_color = 'green'
+        self.text_circle = 8
+
+        #Turtle for finisher
         self.finisher = turtle.Turtle()
-        self.finisher.shape('turtle')
+        self.finisher.shape("turtle")
         self.finisher.speed(0)
-        self.finisher.color('green')
-        self.finisher.pensize(4)
-        self.finisher.penup()
+        self.finisher.pensize(3)
         self.finisher.hideturtle()
+        self.finisher.penup()
+        self.finisher.color(self.run2_color)
 
+
+        # Set few font style and colors
+        self.run1_font= ('Arial', 10)
+        self.run2_font= ('Arial', 14)
+        self.run1_color = 'blue'
+        self.run2_color = 'green'
+        self.summary_font = ('Arial', 16)
+        self.summary_color = ("brown")
+        self.text_circle = 8
+        
+        # to record timesteps for run2
         self.timestep = 0
 
     def showmaze(self, heuristic = None):
+        '''
+        Plot walls, x/y axis, start and goal marker on the screen.
+        Heuristic value plotting is optional.
+        '''
         # iterate through squares one by one to decide where to draw walls
         for x in range(self.maze.dim):
             for y in range(self.maze.dim):
-                # to plot heuristic value
+                # Plot heuristic value
                 if heuristic is not None:
                     h_value = heuristic[x][y]
                     self.wally.color('blue')
@@ -98,7 +112,7 @@ class MazeAnimation():
                     self.wally.pendown()
                     self.wally.forward(self.sq_size)
                     self.wally.penup()
-
+                    # plot x-horizontal coordinate
                     self.wally.goto(self.origin + self.sq_size * x +self.sq_size / 3, self.origin - 40)
                     self.wally.down()
                     self.wally.write(x,font=('Arial', 20), align='left')
@@ -110,114 +124,131 @@ class MazeAnimation():
                     self.wally.pendown()
                     self.wally.forward(self.sq_size)
                     self.wally.penup()
-                    
+                    # plot y-vertical coordinate
                     self.wally.goto(self.origin-40, self.origin + self.sq_size * y + self.sq_size / 3 )
                     self.wally.down()
                     self.wally.write(y,font=('Arial', 20), align='left')
                     self.wally.penup()
 
-     
-        # skip other plotting than walls
-        # return
-
         # mark the start
         self.wally.color('black', 'blue')
         self.wally.hideturtle()
-
-        
+    
         # mark the goals
         self.wally.color('black', 'red')
         self.wally.hideturtle()
         for goal in self.goals:
-            self.wally.up()
+            self.wally.penup()
             self.wally.goto((self.origin + self.sq_size*5/8) + (self.sq_size * goal[0]), (self.origin + self.sq_size*2/4) + (self.sq_size * goal[1]))
-            #wally.goto((origin + sq_size*5/8) + (sq_size * goal[0]), (origin + sq_size*2/4) + (sq_size * goal[1]))
-            
             self.wally.down()
             self.wally.begin_fill()
             self.wally.circle(5)
             self.wally.end_fill()
         
-        self.wally.up()
-        
-        self.mapper.setpos(self.origin + self.start[0] * self.sq_size + self.sq_size/2, self.origin + self.start[1] * self.sq_size + self.sq_size/2)
-        self.mapper.setheading(self.turtle_move[self.heading])
-        self.mapper.showturtle()
-    
-        self.writer.color(self.mapper_text_clr,'white')
+        # Display number of visit in the robot's start position
         self.writer.goto(self.origin + self.start[0]*self.sq_size + self.sq_size/4, self.origin + self.start[1]*self.sq_size +self.sq_size/8)
         self.writer.down()
-        self.writer.write(1,font=self.mapper_font, align='left')
-        self.mapper.penup()
+        self.writer.write(1,font=self.run1_font, align='left')
+        self.writer.penup()
         
+        # Display turtle in the starting position
+        self.wally.penup()
+        self.wally.setpos(self.origin + self.start[0] * self.sq_size + self.sq_size/2, self.origin + self.start[1] * self.sq_size + self.sq_size/2)
+        self.wally.setheading(self.turtle_move[self.heading])
+        self.wally.color("blue")
+        self.wally.showturtle()
+
+        # hide and place finisher turtle in the start position
         self.finisher.setpos(self.origin + self.start[0] * self.sq_size + self.sq_size/2 + 4, self.origin + self.start[1] * self.sq_size + self.sq_size/2)
         self.finisher.setheading(self.turtle_move[self.heading])
+
+        return 
         
         
     def plot_move(self,heading,move_to,run,freq):
+        '''
+        This function plots robot movement from node to node in run1 and run
+        together with number of robot visit in the center of each node.
+        '''
         
         self.heading = heading
-        
+
+        # plot for each run
         if run == 0:
-            # skip this only to plot optimal path for run2
-            #return
-            self.mapper.pendown()
-            self.mapper.setheading(self.turtle_move[heading])
-            self.mapper.goto(self.origin + self.sq_size/2 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            self.wally.color(self.run1_color)
+            self.wally.pensize(1)
+            self.wally.pendown()
+            self.wally.setheading(self.turtle_move[heading])
+            # goto center of given node
+            pos_in_screen = (self.origin + self.sq_size/2 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            self.wally.goto(pos_in_screen)
             
-            self.writer.penup()
-            self.writer.color(self.mapper_text_clr,'white')
+            # goto slightly center of each node and plot number of visits
             self.writer.goto(self.origin + move_to[0]*self.sq_size + self.sq_size/4, self.origin + move_to[1]*self.sq_size + self.sq_size/8)
+            self.writer.color(self.run1_color,'white')
             self.writer.begin_fill()
-            self.writer.circle(self.mapper_circle)
+            self.writer.circle(self.text_circle)
             self.writer.end_fill()
-            self.writer.write(freq,font=self.mapper_font, align='left')
-            self.mapper.penup()
+            self.writer.write(freq,font=self.run1_font, align='left')
+            self.writer.penup()
+
         else:
-            self.mapper.hideturtle()
+
+            self.wally.hideturtle()
             self.finisher.showturtle()
             self.finisher.pendown()
             self.finisher.setheading(self.turtle_move[heading])
-            self.finisher.goto(self.origin + self.sq_size/2 + 4 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            # goto to center of given node
+            pos_in_screen = (self.origin + self.sq_size/2 + 4 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
+            self.finisher.goto(pos_in_screen)
 
+            #increment each timestep done by the robot
             self.timestep += 1
-            self.writer.color(self.finisher_text_clr, 'white')
+            self.writer.color(self.run2_color, 'white')
             self.writer.penup()
             self.writer.goto(self.origin + self.sq_size/2 + 8 + self.sq_size * move_to[0], self.origin + self.sq_size/2 + self.sq_size * move_to[1])
-            self.writer.write(self.timestep,font=self.finisher_font, align='left')
-            self.finisher.penup()
+            self.writer.write(self.timestep,font=self.run2_font, align='left')
+            self.writer.penup()
+
+        return
 
 
     def plot_summary (self, summary_text):
+        '''
+        Plot given summary text file on top of maze walls.
+        '''
+        self.writer.color(self.summary_color)
+
         # plot maze file
-        self.wally.penup()
-        self.wally.goto(self.origin, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2 )
-        self.wally.down()
-        self.wally.write("maze: "+ summary_text["maze"],font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.penup()
+        self.writer.goto(self.origin, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2 )
+        self.writer.down()
+        self.writer.write("maze: "+ summary_text["maze"],font=self.summary_font, align='left')
+        self.writer.penup()
         # plot algorithm
-        self.wally.goto(self.origin, self.origin + self.maze.dim * self.sq_size + 5)
-        self.wally.down()
-        self.wally.write("run1 algorithm: "+ summary_text["alg"],font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.goto(self.origin, self.origin + self.maze.dim * self.sq_size + 5)
+        self.writer.down()
+        self.writer.write("run1 algorithm: "+ summary_text["alg"],font=self.summary_font, align='left')
+        self.writer.penup()
         # plot run1 timesteps
-        self.wally.goto(self.origin + (self.maze.dim * self.sq_size)/2, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2)
-        self.wally.down()
-        self.wally.write("run1 ts: "+ str(summary_text["run1"]),font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.goto(self.origin + (self.maze.dim * self.sq_size)/2, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2)
+        self.writer.down()
+        self.writer.write("run1 ts: "+ str(summary_text["run1"]),font=self.summary_font, align='left')
+        self.writer.penup()
         # plot run2 timesteps
-        self.wally.goto(self.origin + (self.maze.dim * self.sq_size)/2, self.origin + self.maze.dim * self.sq_size + 5)
-        self.wally.down()
-        self.wally.write("run2 ts: "+ str(summary_text["run2"]),font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.goto(self.origin + (self.maze.dim * self.sq_size)/2, self.origin + self.maze.dim * self.sq_size + 5)
+        self.writer.down()
+        self.writer.write("run2 ts: "+ str(summary_text["run2"]),font=self.summary_font, align='left')
+        self.writer.penup()
         # plot coverage
-        self.wally.goto(self.origin + (self.maze.dim * self.sq_size) - 125, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2)
-        self.wally.down()
-        self.wally.write("coverage: "+ str(summary_text["coverage"])+"%",font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.goto(self.origin + (self.maze.dim * self.sq_size) - 125, self.origin + self.maze.dim * self.sq_size + self.sq_size / 2)
+        self.writer.down()
+        self.writer.write("coverage: "+ str(summary_text["coverage"])+"%",font=self.summary_font, align='left')
+        self.writer.penup()
         # plot score
-        self.wally.goto(self.origin + (self.maze.dim * self.sq_size) - 125, self.origin + self.maze.dim * self.sq_size + 5)
-        self.wally.down()
-        self.wally.write("score: "+ str(summary_text["score"]),font=('Arial', 16), align='left')
-        self.wally.penup()
+        self.writer.goto(self.origin + (self.maze.dim * self.sq_size) - 125, self.origin + self.maze.dim * self.sq_size + 5)
+        self.writer.down()
+        self.writer.write("score: "+ str(summary_text["score"]),font=self.summary_font, align='left')
+        self.writer.penup()
+        
         return

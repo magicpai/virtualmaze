@@ -42,7 +42,7 @@ if __name__ == '__main__':
     regression_test = False
 
     # default single test configuration
-    mazefiles = ['test_maze_01.txt']
+    mazefiles = ['test_maze_08.txt']
     animation = False
     algs= ["SHORT_80"]
     attempts = 1

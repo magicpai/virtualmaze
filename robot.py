@@ -88,12 +88,16 @@ class Robot(object):
         )
         self.generate_h_cost(self.goals, self.maps[self.Page.h1])
 
-        self.algs = ["SHORT_100", "SHORT_GOALS", "HEURISTC_100","HEURISTIC_GOALS"]
-        
-        if alg in self.algs:
+        #self.algs = ["SHORT_100","SHORT_80" "SHORT_GOALS", "HEURISTC_100", "HEURISTIC_80", "HEURISTIC_GOALS"]
+
+        self.algs = {"SHORT_100": 100, "SHORT_90": 90, "SHORT_80": 80, "SHORT_70": 70, "SHORT_GOALS": 0, "HEURISTIC_100": 100, "HEURISTIC_90": 90, "HEURISTIC_80": 80, "HEURISTIC_70": 70, "HEURISTIC_GOALS": 0}
+
+        if alg in self.algs.keys():
             self.alg = alg
         else:
             self.alg = "HEURISTIC_GOALS"
+
+        self.coverage = 0
     
         self.f_max = 0
         self.goal_found = False
@@ -168,15 +172,19 @@ class Robot(object):
         rotation = 0
         movement = 0
 
+        if (self.pos['node'] in self.goals) and (not self.goal_found):
+            self.goal_found = True
+            if self.basic_log:
+                print("GOAL VISITED")
+
         if not self.run2:
             self.fill_map_heuristic(sensors)
-            if (0 not in self.maps[self.Page.visits]) or (list(self.pos['node']) in self.goals and self.alg in ["SHORT_GOALS","HEURISTIC_GOALS"]):
-
-                    self.run2 = True
-                    self.pos["node"] = self.start
-                    self.pos["heading"] = self.start_heading
-                    self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], self.goals)
-                    return "Reset", "Reset"
+            if self.is_goal_cov_reached():
+                self.run2 = True
+                self.pos["node"] = self.start
+                self.pos["heading"] = self.start_heading
+                self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], self.goals)
+                return "Reset", "Reset"
 
 
         # pick top most node with lowest f_cost from the list
@@ -188,12 +196,13 @@ class Robot(object):
             for idx, node in enumerate(self.open_nodes):
 
                # print("node under checked:", node)
-                if( list(node) in self.goals and self.alg in ["SHORT_GOALS", "HEURISTIC_GOALS"]):
-                  node_to_go = node
+                #if( list(node) in self.goals and self.alg in ["SHORT_GOALS", "HEURISTIC_GOALS"]):
+                if node in self.goals:
+                    node_to_go = node
                  # print("go to goal", node)
-                  break
+                    break
 
-                if self.alg in ["HEURISTIC_FULL", "HEURISTIC_GOALS"]:
+                if self.alg in ["HEURISTIC_100", "HEURISTIC_90", "HEURISTIC_80", "HEURISTIC_70", "HEURISTIC_GOALS"]:
                     timestep = (self.find_best_path(self.pos["node"], 
                                 self.pos["heading"], [node])
                                 + self.maps[self.Page.h1][tuple(node)]
@@ -234,6 +243,17 @@ class Robot(object):
 
         return rotation, movement
 
+    def is_goal_cov_reached(self):
+
+        if self.basic_log:
+            print("self.algs[self.alg]:", self.algs[self.alg], "self.coverage", self.coverage, "GOAL FOUND:", self.goal_found)
+        if (self.algs[self.alg] <= self.coverage) and self.goal_found:
+            return True
+        else:
+            return False
+
+            
+    
     def fill_map_heuristic(self, sensors):
 
         ## Populate number of open edges in the maze table as indicated by the sensor.
@@ -242,6 +262,10 @@ class Robot(object):
         ## Fill g and f cost
 
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
+
+        node_done = np.count_nonzero(self.maps[self.Page.nstatus1] == self.nstatus["done"]) 
+        
+        self.coverage = round((node_done / (self.maze_dim * self.maze_dim)) * 100, 1)
 
         for idx,item in enumerate(self.open_nodes):
             if item == self.pos["node"]:
@@ -324,9 +348,9 @@ class Robot(object):
                         break
                     
                     # update g_cost if new calculated value smaller than stored or no value stored before
-                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i)) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
+                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
                         
-                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
+                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
                         # add parent node

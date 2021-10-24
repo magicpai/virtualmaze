@@ -3,11 +3,10 @@ import itertools
 import copy
 import numpy as np
 from enum import IntEnum
-from operator import itemgetter
 
 
 class Robot(object):
-    def __init__(self, maze_dim, alg =[]):
+    def __init__(self, maze_dim, alg='', logger=None):
         """
         Use the initialization function to set up attributes that your robot
         will use to learn and navigate the maze. Some initial attributes are
@@ -52,8 +51,6 @@ class Robot(object):
 
         self.nstatus = {"closed": 0, "open": 1, "done": 2}
 
-        # self.dmode = {"RANDOM_FULL": 0, "RANDOM_GOALS": 1, "HEURISTIC_FULL": 2, "HEURISTIC_GOALS": 3}
-
         self.maze_dim = maze_dim
 
         self.maze_center = [(self.maze_dim / 2) - 1, self.maze_dim / 2]
@@ -95,7 +92,7 @@ class Robot(object):
         if alg in self.algs.keys():
             self.alg = alg
         else:
-            self.alg = "HEURISTIC_GOALS"
+            self.alg = "SHORT_80"
 
         self.coverage = 0
     
@@ -129,7 +126,11 @@ class Robot(object):
         self.open_nodes = []
         self.open_nodes.append(self.pos["node"])
 
-        self.basic_log = False
+        #enable or disable debug logging
+        self.debug_logging = True
+        self.logger = None
+        if self.debug_logging and logger:
+            self.logger = logger
 
 
     def generate_h_cost(self, goals, heuristic=[]):
@@ -174,8 +175,6 @@ class Robot(object):
 
         if (self.pos['node'] in self.goals) and (not self.goal_found):
             self.goal_found = True
-            if self.basic_log:
-                print("GOAL VISITED")
 
         if not self.run2:
             self.fill_map_heuristic(sensors)
@@ -235,8 +234,8 @@ class Robot(object):
             ]
         self.timesteps_counter -= 1
 
-        if self.basic_log:
-            print("moves:", self.pos["node"], " to ", move_to, "heading:", heading, "rot", rotation,"mov",movement)
+        if self.logger:
+            self.logger.debug(f"move from {self.pos['node']} to {move_to}, heading: {heading}, rot: {rotation}, mov: {movement}")
         self.pos["node"] = move_to
         self.pos["heading"] = heading
         self.maps[self.Page.visits][tuple(move_to)] += 1
@@ -245,8 +244,8 @@ class Robot(object):
 
     def is_goal_cov_reached(self):
 
-        if self.basic_log:
-            print("self.algs[self.alg]:", self.algs[self.alg], "self.coverage", self.coverage, "GOAL FOUND:", self.goal_found)
+        if self.logger:
+            self.logger.debug(f"Run1 algorithm: {self.algs[self.alg]}, coverage: {self.coverage}, GOAL FOUND: {self.goal_found}")
         if (self.algs[self.alg] <= self.coverage) and self.goal_found:
             return True
         else:
@@ -333,6 +332,9 @@ class Robot(object):
         open_nodes.append(curr_node)
         self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
 
+        if self.logger:
+            self.logger.debug(f"Find best path from {start} to {goals}")
+
         while not goal_found:
             for heading in self.dir_move.keys():
                 distance = self.dist_to_wall(curr_node, heading)
@@ -348,20 +350,23 @@ class Robot(object):
                         break
                     
                     # update g_cost if new calculated value smaller than stored or no value stored before
-                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
+                    if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
                         
-                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1
+                        self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
-                        # add parent node
-                        if self.basic_log:
-                            print("curr_node:", curr_node,"next_node:", next_node,"f_cost:",self.maps[self.Page.f2][tuple(next_node)],"h_cost:",self.maps[self.Page.h2][tuple(next_node)], "g_cost:", self.maps[self.Page.g2][tuple(next_node)])
+                        if self.logger:
+                            self.logger.debug(f"curr_node: {curr_node}, next_node: {next_node}, f_cost:,{self.maps[self.Page.f2][tuple(next_node)]}, h_cost: {self.maps[self.Page.h2][tuple(next_node)]}, g_cost:{self.maps[self.Page.g2][tuple(next_node)]}")
+                        
                         #self.maps[self.Page.parent][tuple(next_node)] = curr_node
+
+                        # add parent node of the current node in the table
                         parents[tuple(next_node)] = curr_node
                         # add  node to open list
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]:
                         open_nodes.append(next_node)
                         self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
+                    # check 
                     if list(next_node) in goals:
                         goal_found = True
                         single_goal_node = next_node
@@ -394,13 +399,12 @@ class Robot(object):
                         elif h_cost == min_f_nodes[0]["h_cost"]:
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
             
-            if self.basic_log:
-                print("open_nodes:", open_nodes)
-                print ("min_f_nodes:", min_f_nodes)
+            if self.logger:
+                self.logger.debug(f"min_f_nodes: {min_f_nodes}")
             #choose min f_cost from open.nodes list
             curr_node = random.choice(min_f_nodes)["node"]
-            if self.basic_log:
-                print("choosen node:", curr_node)
+            if self.logger:
+                self.logger.debug(f"choosen node:, {curr_node}")
 
         # out of while loops , now find best path
         path = []

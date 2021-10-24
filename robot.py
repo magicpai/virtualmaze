@@ -127,7 +127,7 @@ class Robot(object):
         self.open_nodes.append(self.pos["node"])
 
         #enable or disable debug logging
-        self.debug_logging = True
+        self.debug_logging = False
         self.logger = None
         if self.debug_logging and logger:
             self.logger = logger
@@ -355,11 +355,6 @@ class Robot(object):
                         self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
                         # calculate f_cost = g_cost + h_cost for start node
                         self.maps[self.Page.f2][tuple(next_node)] = self.maps[self.Page.g2][tuple(next_node)] + self.maps[self.Page.h2][tuple(next_node)]
-                        if self.logger:
-                            self.logger.debug(f"curr_node: {curr_node}, next_node: {next_node}, f_cost:,{self.maps[self.Page.f2][tuple(next_node)]}, h_cost: {self.maps[self.Page.h2][tuple(next_node)]}, g_cost:{self.maps[self.Page.g2][tuple(next_node)]}")
-                        
-                        #self.maps[self.Page.parent][tuple(next_node)] = curr_node
-
                         # add parent node of the current node in the table
                         parents[tuple(next_node)] = curr_node
                         # add  node to open list
@@ -399,12 +394,7 @@ class Robot(object):
                         elif h_cost == min_f_nodes[0]["h_cost"]:
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
             
-            if self.logger:
-                self.logger.debug(f"min_f_nodes: {min_f_nodes}")
-            #choose min f_cost from open.nodes list
             curr_node = random.choice(min_f_nodes)["node"]
-            if self.logger:
-                self.logger.debug(f"choosen node:, {curr_node}")
 
         # out of while loops , now find best path
         path = []

@@ -5,6 +5,7 @@ import pandas as pd
 from maze import Maze
 from robot import Robot
 from mazeanim import MazeAnimation
+import logging 
 
 
 # global dictionaries for robot movement and sensing
@@ -31,24 +32,32 @@ if __name__ == '__main__':
     algs_pallet = ["SHORT_100", "SHORT_90", "SHORT_80", "SHORT_70","SHORT_GOALS", "HEURISTIC_100", "HEURISTIC_90", "HEURISTIC_80", "HEURISTIC_70", "HEURISTIC_GOALS"]
 
     #store graph postscript
-    store_plot = True
+    store_plot = False
     if store_plot:
         eps_path = "./eps/"
     # store json dataframe
     store_json = True
-    # enable debug prints
-    basic_log = False
     # regression test
     regression_test = False
+    
+    # enable debug logging
+    debug_logging = False
+    logger = None
+    if debug_logging:
+        logfile = "debug_log.txt"
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
+        file_handler = logging.FileHandler(logfile)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     # default single test configuration
-    mazefiles = ['test_maze_08.txt']
+    mazefiles = ['test_maze_01.txt']
     animation = False
-    algs= ["SHORT_80"]
+    algs= ["HEURISTIC_100"]
     attempts = 1
 
-    
-    print("SysArg:", sys.argv)
     # Read sys args if blank or incorrect set all to defaults
     if len(sys.argv) > 1:
         mazefiles = [str(sys.argv[1])]
@@ -97,7 +106,7 @@ if __name__ == '__main__':
                 trip += 1
                 # table for number of visits
                 tablenodes[0].fill(0)
-                testrobot = Robot(testmaze.dim,alg)
+                testrobot = Robot(testmaze.dim,alg,logger)
                 # plot walls
                 if animation:
                     mazeanim = MazeAnimation(testmaze,[0,0],"up", 50)
@@ -122,8 +131,9 @@ if __name__ == '__main__':
                             break
                         # provide robot with sensor information, get actions
                         
-                        if basic_log:
-                            print("test position:",robot_pos['location'],"heading:",robot_pos['heading'])
+                        #logging
+                        if debug_logging:
+                            logger.debug(f"Robot new position: {robot_pos['location']}, heading:,{robot_pos['heading']}")
                         
                         # provide robot with sensor information, get actions
                         sensing = [testmaze.dist_to_wall(robot_pos['location'], heading)
@@ -166,23 +176,23 @@ if __name__ == '__main__':
                                     robot_pos['location'][0] += dir_move[robot_pos['heading']][0]
                                     robot_pos['location'][1] += dir_move[robot_pos['heading']][1]
                                     
-                                    if basic_log:
-                                        print("robot new pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                    #logging
+                                    if debug_logging:
+                                        logger.debug(f"robot intermediate pos:, {robot_pos['location']},heading:, {robot_pos['heading']}")
                                     movement -= 1
                                     
                                 else:
                                     print ("Movement stopped by wall.")
-                                    if basic_log:
-                                        print("robot new pos:", robot_pos['location'],"heading:", robot_pos['heading'])
                                     movement = 0
                             else:
                                 rev_heading = dir_reverse[robot_pos['heading']]
                                 if testmaze.is_permissible(robot_pos['location'], rev_heading):
                                     robot_pos['location'][0] += dir_move[rev_heading][0]
                                     robot_pos['location'][1] += dir_move[rev_heading][1]
-                                    
-                                    if basic_log:
-                                        print("robot new pos:", robot_pos['location'],"heading:", robot_pos['heading'])
+                                    #logging
+                                    if debug_logging:
+                                        logger.debug(f"robot intermediate pos:, {robot_pos['location']},heading:, {robot_pos['heading']}")
+                                
                                     movement += 1
 
                                 else:

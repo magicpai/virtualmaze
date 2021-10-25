@@ -8,12 +8,13 @@ from enum import IntEnum
 class Robot(object):
     def __init__(self, maze_dim, alg='', logger=None):
         """
-        Use the initialization function to set up attributes that your robot
+        Initialization function to set up attributes that your robot
         will use to learn and navigate the maze. Some initial attributes are
         provided based on common information, including the size of the maze
         the robot is placed in.
         """
 
+        # common dictionaries for maze, robot movement and sensing.
         self.dir_sensors = {
             "u": ["l", "u", "r"],
             "r": ["u", "r", "d"],
@@ -35,9 +36,7 @@ class Robot(object):
             "down": "u",
             "left": "r",
         }
-        self.turtle_move = {"u": 90, "r": 0, "d": -90, "l": 180}
         self.rotation = [-90, 0, 90]
-
         self.dir_int = {
             "u": 1,
             "r": 2,
@@ -49,23 +48,7 @@ class Robot(object):
             "left": 8,
         }
 
-        self.nstatus = {"closed": 0, "open": 1, "done": 2}
-
-        self.maze_dim = maze_dim
-
-        self.maze_center = [(self.maze_dim / 2) - 1, self.maze_dim / 2]
-
-        self.start = [0, 0]
-        self.goals = [
-            [product[0], product[1]]
-            for product in itertools.product(self.maze_center, repeat=2)
-        ]
-        self.start_heading = "u"
-        self.max_move = 3
-        self.pos = {"node": self.start, "heading": self.start_heading}
-
-        self.max_move = 3
-
+        # Page enum to address particular table in stacked table/array
         class Page(IntEnum):
             walls = 0
             h1 = 1
@@ -77,54 +60,64 @@ class Robot(object):
             g2 = 7
             f2 = 8
             nstatus2 = 9
+        
+        # Node status: closed not yet detected, open is detected but not 
+        # visited while done is visited. 
+        self.nstatus = {"closed": 0, "open": 1, "done": 2}
 
+        # maze and robot specifications
+        self.maze_dim = maze_dim
+        self.maze_center = [(self.maze_dim / 2) - 1, self.maze_dim / 2]
+        self.start = [0, 0]
+        self.goals = [
+            [product[0], product[1]]
+            for product in itertools.product(self.maze_center, repeat=2)
+        ]
+        self.start_heading = "u"
+        self.max_move = 3
+
+        # set robots position and heading
+        self.pos = {"node": self.start, "heading": self.start_heading}
+
+        # create a map contaning stacked n*n array 
         self.Page = Page
-
         self.maps = np.full(
             (len(self.Page), self.maze_dim, self.maze_dim), 0, dtype=int
         )
+        # generate h_cost and store in h-cost array in the map
         self.generate_h_cost(self.goals, self.maps[self.Page.h1])
 
-        #self.algs = ["SHORT_100","SHORT_80" "SHORT_GOALS", "HEURISTC_100", "HEURISTIC_80", "HEURISTIC_GOALS"]
-
-        self.algs = {"SHORT_100": 100, "SHORT_90": 90, "SHORT_80": 80, "SHORT_70": 70, "SHORT_GOALS": 0, "HEURISTIC_100": 100, "HEURISTIC_90": 90, "HEURISTIC_80": 80, "HEURISTIC_70": 70, "HEURISTIC_GOALS": 0}
-
-        if alg in self.algs.keys():
-            self.alg = alg
-        else:
-            self.alg = "SHORT_80"
-
-        self.coverage = 0
-    
-        self.f_max = 0
-        self.goal_found = False
-        self.run2 = False
-
-        # set f_cost = h_cost + g_cost for start-node
+        # set robots position and heading
+        self.pos = {"node": self.start, "heading": self.start_heading}
+        # For the start node set g_cost, f_cost, number of visit and status in
+        # each respective page in the map
+        self.maps[self.Page.g1][tuple(self.pos["node"])] = 0
         self.maps[self.Page.f1][tuple(self.pos["node"])] = (
             self.maps[self.Page.h1][tuple(self.pos["node"])]
             + self.maps[self.Page.g1][tuple(self.pos["node"])]
         )
-
+        self.maps[self.Page.visits][tuple(self.pos['node'])] = 1
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
 
-        self.timesteps = []
-        self.timesteps_counter = 0
-
-        # set g_cost 0 for start
-        self.maps[self.Page.g1][tuple(self.pos["node"])] = 0
-
-        # set f_cost = h_cost + g_cost for start-node
-        self.maps[self.Page.f1][tuple(self.pos['node'])] = (
-            self.maps[self.Page.h1][tuple(self.pos['node'])] + 
-            self.maps[self.Page.g1][tuple(self.pos['node'])]
-        )
-
-        self.maps[self.Page.visits][tuple(self.pos['node'])] = 1
 
         # list of to be checked nodes sorted by lowest f_cost
         self.open_nodes = []
         self.open_nodes.append(self.pos["node"])
+
+        # robots state and counter during run1 and run2 movement
+        self.goal_found = False
+        self.run2 = False
+        self.coverage = 0
+        self.timesteps = []
+        self.timesteps_counter = 0
+
+        # list of all validated run1 algorithms 
+        self.algs = {"SHORT_100": 100, "SHORT_90": 90, "SHORT_80": 80, "SHORT_70": 70, "SHORT_GOALS": 0, "HEURISTIC_100": 100, "HEURISTIC_90": 90, "HEURISTIC_80": 80, "HEURISTIC_70": 70, "HEURISTIC_GOALS": 0}
+        # set default algorithm if none given during robots initialization
+        if alg in self.algs.keys():
+            self.alg = alg
+        else:
+            self.alg = "SHORT_80"
 
         #enable or disable debug logging
         self.debug_logging = False
@@ -134,6 +127,10 @@ class Robot(object):
 
 
     def generate_h_cost(self, goals, heuristic=[]):
+        '''
+        Funtion to generate and populate h-value of given maze dimension, start 
+        and goals.
+        '''
 
         dist = []
         for x in range(self.maze_dim):
@@ -151,32 +148,22 @@ class Robot(object):
 
     def next_move(self, sensors):
         """
-        Use this function to determine the next move the robot should make,
-        based on the input from the sensors after its previous move. Sensor
-        inputs are a list of three distances from the robot's left, front, and
-        right-facing sensors, in that order.
-
+        Function to determine the next move the robot should make,
+        based on the input from the sensors after its previous move.
         Outputs should be a tuple of two values. The first value indicates
-        robot rotation (if any), as a number: 0 for no rotation, +90 for a
-        90-degree rotation clockwise, and -90 for a 90-degree rotation
-        counterclockwise. Other values will result in no rotation. The second
-        value indicates robot movement, and the robot will attempt to move the
-        number of indicated squares: a positive number indicates forwards
-        movement, while a negative number indicates backwards movement. The
-        robot may move a maximum of three units per turn. Any excess movement
-        is ignored.
-
-        If the robot wants to end a run (e.g. during the first training run in
-        the maze) then returing the tuple ('Reset', 'Reset') will indicate to
-        the tester to end the run and return the robot to the start.
+        robot rotation and the second value indicates robot movement.
+        To end run1 tuple ('Reset', 'Reset') will be returned. 
         """
+
         rotation = 0
         movement = 0
 
         if (self.pos['node'] in self.goals) and (not self.goal_found):
             self.goal_found = True
 
+        # 
         if not self.run2:
+            # based on sensor information 
             self.fill_map_heuristic(sensors)
             if self.is_goal_cov_reached():
                 self.run2 = True

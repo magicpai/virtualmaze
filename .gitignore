@@ -3,3 +3,5 @@ logs.txt
 .DS_Store
 results.json
 .vscode/launch.json
+test_path_finding.py
+.eps/

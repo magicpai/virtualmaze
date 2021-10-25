@@ -154,9 +154,9 @@ class Robot(object):
         rotation = 0
         movement = 0
 
-        # 
+        # update maps during run1 exploration and terminate run1
         if not self.run2:
-            # based on sensor information 
+            # based on sensor reading update walls,f-cost and g_cost
             self.update_map(sensors)
             if self.is_goal_cov_reached():
                 self.run2 = True
@@ -166,54 +166,59 @@ class Robot(object):
                 return "Reset", "Reset"
 
 
-        # pick top most node with lowest f_cost from the list
+        # once consecutive movements done identify next node with lowest 
+        # f_cost for the next exploration
         if self.timesteps_counter == 0:
-
+            # selection list
             timesteps = []
+            # node to be explored
             node_to_go =  None
-
+            # go to each node in the open list
             for idx, node in enumerate(self.open_nodes):
-
-               # print("node under checked:", node)
-                #if( list(node) in self.goals and self.alg in ["SHORT_GOALS", "HEURISTIC_GOALS"]):
+                # if node is the goal pick this for next exploration/visit
                 if node in self.goals:
                     node_to_go = node
-                 # print("go to goal", node)
                     break
-
+                # calculate g_value for heuristic-turn algorithm
                 if self.alg in ["HEURISTIC_100", "HEURISTIC_90", "HEURISTIC_80", "HEURISTIC_70", "HEURISTIC_GOALS"]:
                     timestep = (self.find_best_path(self.pos["node"], 
                                 self.pos["heading"], [node])
                                 + self.maps[self.Page.h1][tuple(node)]
                                 )
+                # calculate g_value for short-turn algorithm
                 else:
                     timestep = self.find_best_path(
                         self.pos["node"], self.pos["heading"], [node]
                         )
-                    
+                # add the first node as the lowest f_cost for the time being to 
+                # the selection list.
                 if not timesteps:
                     timesteps.append({"node":node, "timestep": timestep})
                     continue
+                # replace previous node with other having lower f_cost
                 if timestep < timesteps[0]["timestep"]:
                     timesteps.clear()
                     timesteps.append({"node":node, "timestep": timestep})
+                # if other node having f_cost add to the selection list 
                 if timestep == timesteps[0]["timestep"]:
                     timesteps.append({"node":node, "timestep": timestep})
 
+            # select next node for further exploration
             if node_to_go is None:
                 if timesteps:
                     node_to_go = random.choice(timesteps)["node"]
                 else:
                     print("all nodes are explored but goal is not found so robot stays at the current position")
                     return 0,0
-            
+            # run a-search and get shortest distance of nodes under evaluation.
             self.timesteps_counter = self.find_best_path(self.pos["node"], self.pos["heading"], [node_to_go])
 
+        # get timesteps information of actual running index 
         rotation, movement, heading, move_to = self.timesteps[
             len(self.timesteps) - self.timesteps_counter
             ]
         self.timesteps_counter -= 1
-
+        # logging
         if self.logger:
             self.logger.debug(f"move from {self.pos['node']} to {move_to}, heading: {heading}, rot: {rotation}, mov: {movement}")
         self.pos["node"] = move_to
@@ -363,7 +368,7 @@ class Robot(object):
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]:
                         open_nodes.append(next_node)
                         self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
-                    # check 
+                    # mark if target is found
                     if list(next_node) in targets:
                         target_found = True
                         single_target_node = next_node
@@ -426,7 +431,7 @@ class Robot(object):
                 curr_heading = self.dir_reverse[direction]
             self.timesteps.append((rotation, movement,curr_heading, next_node))
             
-
+        #return number of timesteps for the optimal path
         return len(self.timesteps)
 
 
@@ -453,6 +458,10 @@ class Robot(object):
         return distance
 
     def get_head_mov(self, target, start):
+        '''
+        Function to calculate straight distance and heading from start to  
+        target. None will be returded for diagonal target from the start.
+        '''
 
         dist_vec = (np.array(target) - np.array(start)).tolist()
         if dist_vec[0] == 0 and dist_vec[1] > 0:
@@ -469,19 +478,26 @@ class Robot(object):
             heading = "l"
         else:
             print("not possible to move straight")
-            heading = "unknown"
-            movement = 0
+            heading = None
+            movement = None
         
         return heading, abs(movement)
         
 
     def reset_pathfinder_maps(self):
-
+        '''
+        Function to re-initialize some attributes like heuristic, g_cost and  
+        f_cost, timesteps required for A search to be performed.
+        '''
+        # reset heuristic table for A*
         self.maps[self.Page.h2].fill(0)
+        # reset g_cost table for A*
         self.maps[self.Page.g2].fill(0)
+        # reset f_cost table for A*
         self.maps[self.Page.f2].fill(0)
+        # reset node status table for A*
         self.maps[self.Page.nstatus2].fill(False)
-
+        # reset timesteps 
         self.timesteps = []
         self.timesteps_counter = 0
 

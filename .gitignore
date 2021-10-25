@@ -5,3 +5,9 @@ results.json
 .vscode/launch.json
 test_path_finding.py
 .eps/*
+debug_log.txt
+final_result2.json
+final_results.json
+results.json
+.gitignore
+test_path_finding.py

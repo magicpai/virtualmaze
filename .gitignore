@@ -4,4 +4,4 @@ logs.txt
 results.json
 .vscode/launch.json
 test_path_finding.py
-.eps/
+.eps/*

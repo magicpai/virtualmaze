@@ -68,18 +68,15 @@ class Robot(object):
         # maze and robot specifications
         self.maze_dim = maze_dim
         self.maze_center = [(self.maze_dim / 2) - 1, self.maze_dim / 2]
+        self.max_move = 3
         self.start = [0, 0]
+        self.start_heading = "u"
         self.goals = [
             [product[0], product[1]]
             for product in itertools.product(self.maze_center, repeat=2)
         ]
-        self.start_heading = "u"
-        self.max_move = 3
 
-        # set robots position and heading
-        self.pos = {"node": self.start, "heading": self.start_heading}
-
-        # create a map contaning stacked n*n array 
+        # create a map contaning stacked n*n array / table
         self.Page = Page
         self.maps = np.full(
             (len(self.Page), self.maze_dim, self.maze_dim), 0, dtype=int
@@ -99,8 +96,7 @@ class Robot(object):
         self.maps[self.Page.visits][tuple(self.pos['node'])] = 1
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
 
-
-        # list of to be checked nodes sorted by lowest f_cost
+        # dynamic list of open nodes to be explored in run1
         self.open_nodes = []
         self.open_nodes.append(self.pos["node"])
 
@@ -158,13 +154,10 @@ class Robot(object):
         rotation = 0
         movement = 0
 
-        if (self.pos['node'] in self.goals) and (not self.goal_found):
-            self.goal_found = True
-
         # 
         if not self.run2:
             # based on sensor information 
-            self.fill_map_heuristic(sensors)
+            self.update_map(sensors)
             if self.is_goal_cov_reached():
                 self.run2 = True
                 self.pos["node"] = self.start
@@ -230,6 +223,10 @@ class Robot(object):
         return rotation, movement
 
     def is_goal_cov_reached(self):
+        '''
+        Funtion to check if the targeted exploration coverage achieved and the 
+        goal is visited
+        '''
 
         if self.logger:
             self.logger.debug(f"Run1 algorithm: {self.algs[self.alg]}, coverage: {self.coverage}, GOAL FOUND: {self.goal_found}")
@@ -240,67 +237,82 @@ class Robot(object):
 
             
     
-    def fill_map_heuristic(self, sensors):
+    def update_map(self, sensors):
+        '''
+        Set the real walls values as indicated by the received sensors
+        information. Initially all walls value are set to 0 indicationg all 
+        gates for the time being are closed. Furthermore g_cost and f_cost 
+        are updated.
+        '''
 
-        ## Populate number of open edges in the maze table as indicated by the sensor.
-        ## Initial Maze shows all 0 to begin with all gates closed before start sensing.
-        ## Skip distance 0 as it is already set to 0 during initialisation
-        ## Fill g and f cost
-
+        # mark actual robots node as explored/done and remove the node from 
+        # the open_nodes list 
         self.maps[self.Page.nstatus1][tuple(self.pos["node"])] = self.nstatus["done"]
-
-        node_done = np.count_nonzero(self.maps[self.Page.nstatus1] == self.nstatus["done"]) 
-        
-        self.coverage = round((node_done / (self.maze_dim * self.maze_dim)) * 100, 1)
-
         for idx,item in enumerate(self.open_nodes):
             if item == self.pos["node"]:
                 self.open_nodes.pop(idx)
 
+        # if goal is visited set robot state accordingly
+        if (self.pos['node'] in self.goals) and (not self.goal_found):
+            self.goal_found = True
+
+        # calculate exploration coverage
+        node_done = np.count_nonzero(self.maps[self.Page.nstatus1] == self.nstatus["done"]) 
+        self.coverage = round((node_done / (self.maze_dim * self.maze_dim)) * 100, 1)
+
+        # Set walls value, g_cost, and h_cost for nodes and its adjacent as  
+        # indicated by the sensors as either passable or blocked from 
+        # respective direction  
         for idx, dist in enumerate(sensors):
-
             heading = self.dir_sensors[self.pos["heading"]][idx]
-
-            for i in range(dist):  # skipped if sensor gives 0 distance
+            # skipped if sensor gives 0 distance
+            for i in range(dist):
                 current_node = (np.array(self.pos["node"]) + 
                 (i * np.array(self.dir_move[heading]))).tolist()
-
+                # set the wall value
                 if (self.maps[self.Page.walls][tuple(current_node)] & self.dir_int[heading]) == 0:
                     self.maps[self.Page.walls][tuple(current_node)] += self.dir_int[heading]
-
+                
+                # get adjacent node
                 next_node = (np.array(current_node) + np.array(self.dir_move[heading])).tolist()
-
+                
+                # select only adjacent node if it is new in the list
                 if (self.maps[self.Page.nstatus1][tuple(next_node)]== self.nstatus["closed"]):
+                    # set the wall value
                     if (self.maps[self.Page.walls][tuple(next_node)] & self.dir_int[self.dir_reverse[heading]]) == 0:
                         self.maps[self.Page.walls][tuple(next_node)] += self.dir_int[self.dir_reverse[heading]]
-
                     # calculate g-cost for each permissible node
                     self.maps[self.Page.g1][tuple(next_node)] = (
                         self.maps[self.Page.g1][tuple(current_node)] + 1
                     )
-
                     # calculate f-cost accordingly
                     self.maps[self.Page.f1][tuple(next_node)] = (
                         self.maps[self.Page.h1][tuple(next_node)]
                         + self.maps[self.Page.g1][tuple(next_node)]
                     )
-
+                    # add newly detected nodes to the list
                     self.open_nodes.append(next_node)
-
                     self.maps[self.Page.nstatus1][tuple(next_node)] = self.nstatus["open"]
-
-                else:  # "only update the maze"
+                # Update the wall only if adjacent node already in the list
+                else:
                     if ( self.maps[self.Page.walls][tuple(next_node)] & 
                         self.dir_int[self.dir_reverse[heading]]) == 0:
                         self.maps[self.Page.walls][tuple(next_node)] += self.dir_int[self.dir_reverse[heading]]
         
         return
 
-    def find_best_path(self, start, heading, goals):
+    def find_best_path(self, start, heading, targets):
+        '''
+        This is A-search algorithm to find the best optimal path from 
+        a start to targets given actual knowledge of the maze. Number of 
+        timesteps will be returned to the caller and the path of movemevent and 
+        rotation are stored as robots attribute timesteps self.timesteps
+        '''
         
+        # running list of open nodes for expanding 
         open_nodes = []
-        goal_found = False
-        single_goal_node =[]
+        target_found = False
+        single_target_node =[]
 
         parents = np.ndarray(shape=(self.maze_dim, self.maze_dim), dtype=object)
 
@@ -308,7 +320,7 @@ class Robot(object):
         curr_heading = heading
 
         self.reset_pathfinder_maps()
-        self.generate_h_cost(goals, self.maps[self.Page.h2])
+        self.generate_h_cost(targets, self.maps[self.Page.h2])
 
         # set g_cost 0 for start node
         self.maps[self.Page.g2][tuple(curr_node)] = 0
@@ -320,9 +332,9 @@ class Robot(object):
         self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
 
         if self.logger:
-            self.logger.debug(f"Find best path from {start} to {goals}")
+            self.logger.debug(f"Find best path from {start} to {targets}")
 
-        while not goal_found:
+        while not target_found:
             for heading in self.dir_move.keys():
                 distance = self.dist_to_wall(curr_node, heading)
             # cap distance until self.max_move
@@ -349,13 +361,13 @@ class Robot(object):
                         open_nodes.append(next_node)
                         self.maps[self.Page.nstatus2][tuple(next_node)] = self.nstatus["open"]
                     # check 
-                    if list(next_node) in goals:
-                        goal_found = True
+                    if list(next_node) in targets:
+                        target_found = True
                         single_goal_node = next_node
                         break
 
             # out of for loop
-            if goal_found:
+            if target_found:
                 continue
 
             # mark node already evaluates as done and removed from open_nodes list

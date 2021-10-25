@@ -311,14 +311,15 @@ class Robot(object):
         
         # running list of open nodes for expanding 
         open_nodes = []
+
+        # initialize all required local variables
         target_found = False
         single_target_node =[]
-
         parents = np.ndarray(shape=(self.maze_dim, self.maze_dim), dtype=object)
-
         curr_node = start
         curr_heading = heading
 
+        # populate heuristic value
         self.reset_pathfinder_maps()
         self.generate_h_cost(targets, self.maps[self.Page.h2])
 
@@ -331,9 +332,12 @@ class Robot(object):
         open_nodes.append(curr_node)
         self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["open"]
 
+        # logging
         if self.logger:
             self.logger.debug(f"Find best path from {start} to {targets}")
 
+        # Expand nodes from start until target is found. Thereby fastest path 
+        # indicated by low f_cost needs to be prioritized for expansion.
         while not target_found:
             for heading in self.dir_move.keys():
                 distance = self.dist_to_wall(curr_node, heading)
@@ -343,12 +347,11 @@ class Robot(object):
                 
                 for i in range(1, distance + 1):
                     next_node = (np.array(curr_node) + (i * np.array(self.dir_move[heading]))).tolist()
-                    
                     # skip neighbour node if already evaluated(done)
                     if self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["done"]:
                         break
-                    
-                    # update g_cost if new calculated value smaller than stored or no value stored before
+                    # update g_cost if new calculated value smaller than stored 
+                    # or no value stored before
                     if (self.maps[self.Page.g2][tuple(next_node)] > (self.maps[self.Page.g2][tuple(curr_node)] + 1 + i )) or (self.maps[self.Page.nstatus2][tuple(next_node)] == self.nstatus["closed"]):
                         
                         self.maps[self.Page.g2][tuple(next_node)] = self.maps[self.Page.g2][tuple(curr_node)] + 1 + i
@@ -363,19 +366,19 @@ class Robot(object):
                     # check 
                     if list(next_node) in targets:
                         target_found = True
-                        single_goal_node = next_node
+                        single_target_node = next_node
                         break
 
-            # out of for loop
+            # exit the while loop if the target is found
             if target_found:
                 continue
-
-            # mark node already evaluates as done and removed from open_nodes list
+            # mark node already evaluates as done and removed from the list
             self.maps[self.Page.nstatus2][tuple(curr_node)] = self.nstatus["done"]
             for idx,node in enumerate(open_nodes):
                 if node == curr_node:
                     open_nodes.pop(idx)
 
+            # populate node(s) with the lowest f_cost 
             min_f_nodes = []
             for node in open_nodes:
                 f_cost = self.maps[self.Page.f2][tuple(node)]
@@ -392,15 +395,16 @@ class Robot(object):
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
                         elif h_cost == min_f_nodes[0]["h_cost"]:
                             min_f_nodes.append({"node":node, "f_cost": f_cost, "h_cost": h_cost})
-            
+            # choose one node randomly if several nodes having same low f_cost
             curr_node = random.choice(min_f_nodes)["node"]
 
-        # out of while loops , now find best path
+        # Nodes expanded until target node. Now backtrack the path from the  
+        # target to the start by checking respective parent node and create a 
+        # final path from the start to the target.
         path = []
-        parent_node = single_goal_node
+        parent_node = single_target_node
         path.append(parent_node)
         timestep = 0
-
         while True:
             parent_node = parents[tuple(parent_node)]
             path.insert(0,parent_node)
@@ -408,6 +412,8 @@ class Robot(object):
                 break
             timestep += 1
         
+        # convert path to final list of tuple containing rotation and movement.
+        # This final list is stored as robots attribute.
         for idx,node in enumerate(path[:-1]):
             next_node = path[idx+1]
             direction, movement = self.get_head_mov(next_node,node)
@@ -418,12 +424,8 @@ class Robot(object):
                 rotation = 0  # indicator for backward movement
                 movement = - movement
                 curr_heading = self.dir_reverse[direction]
-            
-            #curr_heading = direction self.dir_reverse
-            #self.timesteps.append({"rotation": rotation, "movement": movement})
             self.timesteps.append((rotation, movement,curr_heading, next_node))
             
-        #print("length of timesteps:", len(self.timesteps), " timesteps:", self.timesteps)
 
         return len(self.timesteps)
 

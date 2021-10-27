@@ -19,7 +19,7 @@ For full detail of the project, please see 'report.pdf'.
 
 * robot.py - This is the core of the robot controller.
 * alg_tester.py - Providing various run1 algorithms tests and repetition test as random selection is a part included in the solutions
-* tester.py - This script is run to test the robot’s ability to navigate the mazes.
+* tester.py - To test the robot’s ability to navigate the mazes and measure robort performance.
 * mazeanim.py - Providing animation of robot movements using turtle module. 
 * maze.py - This script is used to construct each maze and interacts with the robot whenever it is moving or checking its sensors.
 * showmaze.py - This script creates a visual layout of each maze.

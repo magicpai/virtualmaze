@@ -38,3 +38,29 @@ For full detail of the project, please see 'report.pdf'.
 #### Supplementary Files
 * all_results.json - store dataframe results in json 
 * analysis.ipynb - jupyter notebook for statistical analysis
+
+#### Testing the Robot 
+
+* Simple Test
+In terminal or command window, enter and run the following:
+python tester.py mazefile 
+e.g. python tester.py test_maze_01.txt
+
+* Test particular run1 algorithm with animation
+In terminal or command window, enter and run the following:
+python alg_tester.py mazefile [anim] [algorithm]
+e.g. python alg_tester.py test_maze_01.txt anim SHORT_90
+Supported run1 algorithm:
+["SHORT_100", "SHORT_90", "SHORT_80", "SHORT_70","SHORT_GOALS", 
+"HEURISTIC_100", "HEURISTIC_90", "HEURISTIC_80", "HEURISTIC_70", "HEURISTIC_GOALS"]
+
+
+### To enable more functionalities, script modification required
+* Enable logging 
+modify debug_logging variable in alg_tester.py e.g. debug_logging = False
+* Store dataframe json
+modify store_json variable in alg_tester.py e.g. store_json = True
+* Store animation drawing as postscript
+modify store_plot variable in alg_tester.py e.g. store_plot = True
+* Run full regression test 
+modify store_plot variable in alg_tester.py e.g. regression_test = True

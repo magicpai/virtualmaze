@@ -55,7 +55,7 @@ Supported run1 algorithm:
 "HEURISTIC_100", "HEURISTIC_90", "HEURISTIC_80", "HEURISTIC_70", "HEURISTIC_GOALS"]
 
 
-### To enable more functionalities, script modification required
+#### To enable more functionalities, script modification required
 * Enable logging 
 modify debug_logging variable in alg_tester.py e.g. debug_logging = False
 * Store dataframe json

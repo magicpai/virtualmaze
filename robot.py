@@ -113,7 +113,7 @@ class Robot(object):
         if alg in self.algs.keys():
             self.alg = alg
         else:
-            self.alg = "SHORT_80"
+            self.alg = "SHORT_90"
 
         #enable or disable debug logging
         self.debug_logging = False

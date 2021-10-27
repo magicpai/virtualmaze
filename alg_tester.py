@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # default single test configuration
     mazefiles = ['test_maze_01.txt']
     animation = False
-    algs= ["HEURISTIC_100"]
+    algs= ["SHORT_90"]
     attempts = 1
 
     # Read sys args if blank or incorrect set all to defaults

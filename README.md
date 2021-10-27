@@ -1,4 +1,4 @@
-# Capstone Project for Udacity's Machine Learning Engineer Nanodegree
+### Capstone Project for Udacity's Machine Learning Engineer Nanodegree
 by Paima Marbun
 ## Robot Motion Planning
 ### Plot and Navigate a Virtual Maze
